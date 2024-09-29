@@ -1,0 +1,510 @@
+$(function() {
+	(new IteminfoUtilCommon()).init(
+			{'$regdaycommon' : $('#regdaycommon')
+			, '$startdaycommon' : $('#startdaycommon')
+			, '$enddaycommon' : $('#enddaycommon')
+			, '$yyyyCcommon' : $('#yyyyCcommon')
+			, '$start_mmddcommon' : $('#start_mmddcommon')
+			, '$yyyyDcommon' : $('#yyyyDcommon')
+			, '$periodcommon' : $('#periodcommon')
+			, '$yyyyEcommon' : $('#yyyyEcommon')
+			, '$mmcommon' : $('#mmcommon')
+			, '$graderankcommon' : $('#graderankcommon')
+			,'$productclscodecommon' : $('#productclscodecommon')
+			, '$itemcategorycodecommon' : $('#itemcategorycodecommon')
+			, '$itemcodecommon' : $('#itemcodecommon')
+			, '$kindcodecommon' : $('#kindcodecommon')
+			, 'pepper_all_yn_common' : 'Y'
+			, 'productclscodecommon' : '${productclscodecommon}'
+			, '$countycodecommon' : $('#countycodecommon')});
+});
+
+/**
+ * 부류/품목/품종 유틸 객체 정의
+ */
+var IteminfoUtilCommon = function() {
+	
+	var $regdaycommon = null;
+	var $startdaycommon = null;
+	var $enddaycommon = null;
+	var $yyyyCcommon = null;
+	var $start_mmddcommon = null;
+	var $yyyyDcommon = null;
+	var $periodcommon = null;
+	var $yyyyEcommon = null;
+	var $mmcommon = null;
+	var $yyyycommon = null;
+	var $periodcommon = null;
+	
+	var $productclscodecommon = null;
+	var $itemcategorycodecommon = null;
+	var $itemcodecommon = null;
+	var $kindcodecommon = null;
+	var $productrankcodecommon = null;
+	var $countycodecommon = null;
+	var $graderankcommon = null;
+	var pepper_all_yn_common = 'N';
+	var productclscodecommon = null;
+	var searchType = 'A';
+
+	/**
+	 * 초기화
+	 * @param.$regdaycommon			: 단일달력 날짜 jquery 객체
+	 * @param.$startdaycommon			: 기간달력 날짜 jquery 객체
+	 * @param.$enddaycommon			: 기간달력 날짜 jquery 객체
+	 * @param.$yyyycommon				: 년도 jquery 객체
+	 * @param.$periodcommon			: 기간년도 jquery 객체
+	 * @param.$itemcategorycodecommon	: 부류코드 jquery 객체
+	 * @param.$itemcodecommon			: 품목코드 jquery 객체
+	 * @param.$kindcodecommon			: 품종코드 jquery 객체
+	 * @param.$productrankcodecommon	: 등급코드 jquery 객체
+	 * @param.pepper_all_yn_common		: 건고추 전체(화건), 전체(양건) 조회 여부
+	 * @param.$productclscodecommon	: 도매/소매/친환경 구분 코드
+	 */
+	this.init = function(param) {
+		try {
+			$regdaycommon				= param.$regdaycommon;
+			$startdaycommon				= param.$startdaycommon;
+			$enddaycommon				= param.$enddaycommon;
+			$yyyyCcommon				= param.$yyyyCcommon;
+			$start_mmddcommon			= param.$start_mmddcommon;
+			$yyyyDcommon				= param.$yyyyDcommon;
+			$periodcommon				= param.$periodcommon;
+			$yyyyEcommon				= param.$yyyyEcommon;
+			$mmcommon					= param.$mmcommon;
+			$yyyycommon					= param.$yyyycommon;
+			$periodcommon				= param.$periodcommon;
+			
+			$productclscodecommon		= param.$productclscodecommon;
+			$itemcategorycodecommon		= param.$itemcategorycodecommon;
+			$itemcodecommon				= param.$itemcodecommon;
+			$kindcodecommon				= param.$kindcodecommon;
+			$productrankcodecommon		= param.$productrankcodecommon;
+			$countycodecommon			= param.$countycodecommon;
+			$graderankcommon			= param.$graderankcommon;
+			pepper_all_yn_common		= param.pepper_all_yn_common;
+			
+			if(typeof($regdaycommon) == 'object') {
+				// 달력 날짜 변경시 처리
+				$regdaycommon.change(function() {
+					searchType = 'A';
+					_getItemcategorycodeList(_getYearInfo());
+					_getCountycodeList(_getYearInfo());
+				});
+			}
+			
+			if(typeof($startdaycommon) == 'object' && typeof($enddaycommon) == 'object') {
+				// 시작 달력 날짜 변경시 처리
+				$startdaycommon.change(function() {
+					searchType = 'B';
+					_getItemcategorycodeList(_getYearInfo());
+					_getCountycodeList(_getYearInfo());
+				});
+
+				// 종료 달력 날짜 변경시 처리
+				$enddaycommon.change(function() {
+					searchType = 'B';
+					_getItemcategorycodeList(_getYearInfo());
+					_getCountycodeList(_getYearInfo());
+				});
+			} 
+			
+			if(typeof($yyyyCcommon) == 'object') {
+				// 연도 변경시 처리
+				$yyyyCcommon.change(function() {
+					searchType = 'C';
+					_getItemcategorycodeList(_getYearInfo());
+					_getCountycodeList(_getYearInfo());
+				});
+			} 
+			
+			if(typeof($yyyyDcommon) == 'object' && typeof($periodcommon) == 'object') {
+				// 달력 날짜 변경시 처리
+				$yyyyDcommon.change(function() {
+					searchType = 'D';
+					_getItemcategorycodeList(_getYearInfo());
+					_getCountycodeList(_getYearInfo());
+				});
+				
+				// 달력 날짜 변경시 처리
+				$periodcommon.change(function() {
+					searchType = 'D';
+					_getItemcategorycodeList(_getYearInfo());
+					_getCountycodeList(_getYearInfo());
+				});
+			} 
+			
+			if(typeof($yyyyEcommon) == 'object') {
+				// 달력 날짜 변경시 처리
+				$yyyyEcommon.change(function() {
+					searchType = 'E';
+					_getItemcategorycodeList(_getYearInfo());
+					_getCountycodeList(_getYearInfo());
+				});
+			}
+			
+			// 부류변경 시 처리
+			if(typeof(param.$itemcategorycodecommon) == 'object') {
+				$itemcategorycodecommon.change(function() {
+					_getItemcodeList($itemcategorycodecommon.val(), _getYearInfo());
+				});
+			}
+
+			// 품목변경 시 처리
+			if(typeof(param.$itemcodecommon) == 'object') {
+				$itemcodecommon.change(function() {
+					_getKindcodeList($itemcodecommon.val(), _getYearInfo());
+				});
+			}
+
+			// 품종변경 시 처리
+			if(typeof(param.$kindcodecommon) == 'object') {
+				$kindcodecommon.change(function() {
+					_getProductrankcodeList($itemcodecommon.val(), $kindcodecommon.val());
+				});
+			}
+		} catch(e) {
+			alert("[/js/customer/iteminfo_util.js's IteminfoUtil.init]" + e);
+		}
+	};
+	
+	/**
+	 * 부류 코드 목록 조회
+	 * @param param.yyyy		: 년도
+	 * @param param.startyear	: 시작년도
+	 * @param param.endyear		: 종료년도
+	 */
+	var _getItemcategorycodeList = function(param) {
+		try {
+			var l_actionname = '';
+			if(param.yyyy) {
+				l_actionname = 'getItemcategorycodeList';
+			} else {
+				l_actionname = 'getItemcategorycodeListByPeriod';
+			}
+			
+			$itemcategorycodecommon.val('100');
+			
+			if(typeof($itemcategorycodecommon) == 'object') {
+				$('#ulitemcategorycodecommon').configSelectBox({
+					'url' : '/common/pr_priceinfo_codelist.do?action=' + l_actionname
+					,'querystring' : 'productclscode=' + $productclscodecommon.val() + '&yyyy=' + param.yyyy + '&startyear=' + param.startyear + '&endyear=' + param.endyear
+					,'id' : 'itemcategorycodecommon'
+					,'callback' : function(selectedCode) {
+						try {
+							$("#itemcategorycodecommon").val(selectedCode);
+							$itemcategorycodecommon.val(selectedCode);
+							_getItemcodeList($itemcategorycodecommon.val(), param);
+						} catch(e) {
+							alert("[/js/common/iteminfo_util_common.js's _getItemcategorycodeList.callback]");
+						}
+					}
+				});
+			}
+		} catch(e) {
+			alert("[/js/customer/iteminfo_util.js's IteminfoUtil._getItemcategorycodeList]");
+		}
+	};
+
+	/**
+	 * 품목 코드 목록 조회
+	 * @param p_itemcategorycode	: 부류코드
+	 * @param param.yyyy			: 년도
+	 * @param param.startyear		: 시작년도
+	 * @param param.endyear			: 종료년도
+	 */
+	var _getItemcodeList = function(p_itemcategorycode, param) {
+		try {
+			var l_actionname = '';
+			if(param.yyyy) {
+				l_actionname = 'getItemcodeList';
+			} else {
+				l_actionname = 'getItemcodeListByPeriod';
+			}
+			
+			if(typeof($itemcodecommon) == 'object') {
+				$('#ulitemcodecommon').configSelectBox({
+					'url' : '/common/pr_priceinfo_codelist.do?action=' + l_actionname
+					,'querystring' : 'productclscode=' + $productclscodecommon.val() + '&itemcategorycode=' + p_itemcategorycode + '&yyyy=' + param.yyyy + '&startyear=' + param.startyear + '&endyear=' + param.endyear
+					,'id' : 'itemcodecommon'
+					,'callback' : function(selectedCode) {
+						try {
+							$("#itemcodecommon").val(selectedCode);
+							$itemcodecommon.val(selectedCode);
+							_getKindcodeList($itemcodecommon.val(), param);
+						} catch(e) {
+							alert("[/js/common/iteminfo_util_common.js's _getItemcodeList.callback]");
+						}
+					}
+				});
+			}
+		} catch(e) {
+			alert("[/js/customer/iteminfo_util.js's IteminfoUtil._getItemcodeList]");
+			alert(e);
+		}
+	};
+
+	/**
+	 * 품종 코드 목록 조회
+	 * @param p_itemcode		: 품목코드
+	 * @param param.yyyy		: 년도
+	 * @param param.startyear	: 시작년도
+	 * @param param.endyear		: 종료년도
+	 */
+	var _getKindcodeList = function(p_itemcode, param) {
+		try {
+			var l_actionname = '';
+			if(param.yyyy) {
+				l_actionname = 'getKindcodeList';
+			} else {
+				l_actionname = 'getKindcodeListByPeriod';
+			}
+			
+			if(typeof($kindcodecommon) == 'object') {
+				$('#ulkindcodecommon').configSelectBox({
+					'url' : '/common/pr_priceinfo_codelist.do?action=' + l_actionname
+					,'querystring' : 'productclscode=' + $productclscodecommon.val() + '&itemcode=' + p_itemcode + '&pepper_all_yn=' + pepper_all_yn_common + '&yyyy=' + param.yyyy + '&startyear=' + param.startyear + '&endyear=' + param.endyear
+					,'id' : 'kindcodecommon'
+					,'callback' : function(selectedCode) {
+						try {
+							$("#kindcodecommon").val(selectedCode);
+							$kindcodecommon.val(selectedCode);
+							_getProductrankcodeList($itemcodecommon.val(), $kindcodecommon.val());
+						} catch(e) {
+							alert("[/js/common/iteminfo_util_common.js's _getKindcodeList.callback]");
+						}
+					}
+				});
+			}
+		} catch(e) {
+			alert("[/js/customer/iteminfo_util.js's IteminfoUtil._getKindcodeList]");
+		}
+	};
+
+	/**
+	 * 등급 코드 목록 조회
+	 * @param p_itemcode : 품목코드
+	 * @param p_kindcode : 품종코드
+	 */
+	var _getProductrankcodeList = function(p_itemcode, p_kindcode) {
+		try {
+			if(typeof($graderankcommon) == 'object') {
+				$('#ulgraderankcommon').configSelectBox({
+					'url' : '/common/pr_priceinfo_codelist.do?action=getRanklistByItem'
+					,'querystring' : 'productclscode=' + $productclscodecommon.val() + '&itemcode='+ p_itemcode +'&kindcode=' + p_kindcode
+					,'id' : 'productrankcode'
+					,'callback' : function(selectedCode) {
+						try {
+							$("#graderankcommon").val(selectedCode);
+							$graderankcommon.val(selectedCode);
+						} catch(e) {
+							alert("[/js/common/iteminfo_util_common.js's _getProductrankcodeList.callback]");
+						}
+					}
+				});
+			}
+		} catch(e) {
+			alert("[/js/customer/iteminfo_util.js's IteminfoUtil._getProductrankcodeList]");
+		}
+	}; 
+	
+	/**
+	 * 연도 변경에 따른 지역코드 변경
+	 */
+	var _getCountycodeList = function(param) {
+		try {
+			var l_actionname = '';
+			if(param.yyyy) {
+				l_actionname = 'getCountycodeList';
+			} else {
+				l_actionname = 'GetCountycodeListByPeriod';
+			}
+
+			if(typeof($countycodecommon) == 'object') {
+				$('#ulcountycodecommon').configSelectBox({
+					 url : '/common/pr_priceinfo_codelist.do?action=' + l_actionname
+					,querystring : 'useyn=Y' + '&productclscode=' + $productclscodecommon.val() + '&yyyy=' + param.yyyy + '&startyear=' + param.startyear + '&endyear=' + param.endyear
+					,id : 'countycodecommon'
+				});
+			}
+		} catch(e) {
+			alert("[/js/common/iteminfo_util.js's IteminfoUtil._getCountycodeList]");
+		}
+	};
+	
+	/**
+	 * 년도 정보를 json 포맷으로 반환하는 함수
+	 */
+	var _getYearInfo = function() {
+		var returnvalue = {'yyyy':'', 'startyear':'', 'endyear':''};
+		try {
+			if(searchType == 'A') {
+				returnvalue.yyyy = $regdaycommon.val().substring(0, 4);
+				returnvalue.startyear = '';
+				returnvalue.endyear = '';
+			} else if(searchType == 'B') {
+				returnvalue.yyyy = '';
+				returnvalue.startyear = $startdaycommon.val().substring(0, 4);
+				returnvalue.endyear = $enddaycommon.val().substring(0, 4);
+			} else if(searchType == 'C') {
+				returnvalue.yyyy = $yyyyCcommon.val();
+				returnvalue.startyear = '';
+				returnvalue.endyear = '';
+			} else if(searchType == 'D') {
+				returnvalue.yyyy = '';
+				returnvalue.startyear = (Number($yyyycommon.val()) - Number($periodcommon.val()));
+				returnvalue.endyear = $yyyycommon.val();
+			} else if(searchType == 'E') {
+				returnvalue.yyyy = $yyyyEcommon.val();
+				returnvalue.startyear = '';
+				returnvalue.endyear = '';
+			}
+		} catch(e) {
+			alert("[/js/customer/iteminfo_util.js's IteminfoUtil._getYearInfo]");
+		}
+		return returnvalue;
+	};
+	
+};
+
+var searchComm = new Array();
+//도매정보
+searchComm[1] = ["/customer/price/wholesale/item.do?action=priceinfo", 			"X", "A", "H", "I", "J", "K", "02"];
+searchComm[2] = ["/customer/price/wholesale/period.do?action=daily", 			"Y", "B", "G", "H", "I", "J", "K", "02"];
+searchComm[3] = ["/customer/price/wholesale/period.do?action=every5days", 		"Y", "C", "G", "H", "I", "J", "K", "02"];
+searchComm[4] = ["/customer/price/wholesale/period.do?action=tendays", 			"Y", "D", "G", "H", "I", "J", "K", "02"];
+searchComm[5] = ["/customer/price/wholesale/period.do?action=monthly", 			"Y", "D", "G", "H", "I", "J", "K", "02"];
+searchComm[6] = ["/customer/price/wholesale/period.do?action=yearly", 			"Y", "D", "G", "H", "I", "J", "K", "02"];
+searchComm[7] = ["/customer/price/wholesale/catalogue.do?action=daily", 		"Z", "A", "G", "H", "02"];
+searchComm[8] = ["/customer/price/wholesale/catalogue.do?action=monthly", 		"Z", "E", "G", "H", "02"];
+searchComm[9] = ["/customer/price/wholesale/catalogue.do?action=yearly", 		"Z", "D", "G", "H", "02"];
+//소매정보
+searchComm[10] = ["/customer/price/retail/item.do?action=priceinfo", 			"X", "A", "H", "I", "J", "K", "01"];
+searchComm[11] = ["/customer/price/retail/period.do?action=daily", 				"Y", "B", "G", "H", "I", "J", "K", "01"];
+searchComm[12] = ["/customer/price/retail/period.do?action=every5days", 		"Y", "C", "G", "H", "I", "J", "K", "01"];
+searchComm[13] = ["/customer/price/retail/period.do?action=tendays", 			"Y", "D", "G", "H", "I", "J", "K", "01"];
+searchComm[14] = ["/customer/price/retail/period.do?action=monthly", 			"Y", "D", "G", "H", "I", "J", "K", "01"];
+searchComm[15] = ["/customer/price/retail/period.do?action=yearly", 			"Y", "D", "G", "H", "I", "J", "K", "01"];
+searchComm[16] = ["/customer/price/retail/catalogue.do?action=daily", 			"Z", "A", "G", "H", "01"];
+searchComm[17] = ["/customer/price/retail/catalogue.do?action=monthly", 		"Z", "E", "G", "H", "01"];
+searchComm[18] = ["/customer/price/retail/catalogue.do?action=yearly", 			"Z", "D", "G", "H", "01"];
+//도소매정보
+searchComm[19] = ["/customer/price/product/item.do?action=priceinfo", 			"X", "A", "H", "I", "J", "K", ""];
+searchComm[20] = ["/customer/price/product/period.do?action=daily", 			"Y", "B", "G", "H", "I", "J", "K", ""];
+searchComm[21] = ["/customer/price/product/period.do?action=every5days", 		"Y", "C", "G", "H", "I", "J", "K", ""];
+searchComm[22] = ["/customer/price/product/period.do?action=tendays", 			"Y", "D", "G", "H", "I", "J", "K", ""];
+searchComm[23] = ["/customer/price/product/period.do?action=monthly", 			"Y", "D", "G", "H", "I", "J", "K", ""];
+searchComm[24] = ["/customer/price/product/period.do?action=yearly", 			"Y", "D", "G", "H", "I", "J", "K", ""];
+searchComm[25] = ["/customer/price/product/catalogue.do?action=daily", 			"Z", "A", "G", "H", ""];
+searchComm[26] = ["/customer/price/product/catalogue.do?action=monthly", 		"Z", "E", "G", "H", ""];
+searchComm[27] = ["/customer/price/product/catalogue.do?action=yearly", 		"Z", "D", "G", "H", ""];
+//업태별정보
+searchComm[28] = ["/customer/price/bizcondition/period.do?action=daily", 		"Y", "B", "G", "H", "I", "J", "K", "01"];
+searchComm[29] = ["/customer/price/bizcondition/period.do?action=monthly", 		"Y", "D", "G", "H", "I", "J", "K", "01"];
+searchComm[30] = ["/customer/price/bizcondition/period.do?action=yearly", 		"Y", "D", "G", "H", "I", "J", "K", "01"];
+searchComm[31] = ["/customer/price/bizcondition/catalogue.do?action=daily", 	"Z", "A", "G", "H", "01"];
+searchComm[32] = ["/customer/price/bizcondition/catalogue.do?action=monthly", 	"Z", "E", "G", "H", "01"];
+searchComm[33] = ["/customer/price/bizcondition/catalogue.do?action=yearly", 	"Z", "D", "G", "H", "01"];
+//친환경농산물
+searchComm[34] = ["/customer/price/eco/item.do?action=priceinfo", 				"X", "A", "H", "I", "J", "L", "03"];
+searchComm[35] = ["/customer/price/eco/period.do?action=priceinfo", 			"Y", "B", "G", "H", "I", "J", "L", "03"];
+searchComm[36] = ["/customer/price/eco/catalogue.do?action=priceinfo", 			"Z", "A", "G", "H", "03"];
+
+function searchTop(idx){
+	
+	var total = searchComm[idx].length;
+	
+	$(".searchCommArea").hide();
+	$("#convert_kg_of_common").remove();
+	$("#convert_kg_yncommon").remove();
+	
+	$("#H2").show();
+	$("#H3").show();
+	if( 10 > idx && idx > 0){
+		$("#H2").hide();
+	}
+	if( 37 > idx && idx > 33){
+		$("#H3").hide();
+		$("#rankcommon").val("Y");
+	}else{
+		$("#rankcommon").val("N");
+	}
+	
+	$(searchComm[idx]).each(function(index, data) { 
+	    if(index == 0){
+	    	$("#searchCommUrl").val(data);
+	    	if(data.indexOf("catalogue") > -1){
+	    		$("#ulitemcategorycodecommon").removeClass("list_ty1");
+	    		$("#ulitemcategorycodecommon").addClass("list_ty3");
+	    	}else{
+	    		$("#ulitemcategorycodecommon").removeClass("list_ty3");
+	    		$("#ulitemcategorycodecommon").addClass("list_ty1");
+	    	}
+	    }else if(index == total-1){
+	    	$("#productclscodecommon").val(data);
+		}else{
+			if(index == 1){
+				$("#commonSearchArea").removeClass();
+				if(data == 'X'){
+					$("#commonSearchArea").addClass("smart_searchWrap");
+					$("#commonSearchArea").addClass("type1");
+				}else if (data == 'Y'){
+					$("#commonSearchArea").addClass("smart_searchWrap");
+					$("#commonSearchArea").addClass("type2");
+				}else if (data == 'Z'){
+					$("#commonSearchArea").addClass("smart_searchWrap");
+					$("#commonSearchArea").addClass("type4");
+				}
+			}
+			if(index == 2){
+				$("#searchCommType").val(data);
+				if(data == 'C'||data == 'D'||data == 'E'){
+					$('#yyyy'+data+"common").configOptionBox({
+						url : '/common/pr_priceinfo_codelist.do?action=getYYYYcodeList'
+						,querystring : ''
+					});
+				}
+			}
+	    	if(index == total-2){
+		    	var inner = '<a id="convert_kg_of_common" class="btn_kg" onclick="setSearchBox(\'kg\',\'convert_kg_yncommon\')">kg 단위환산</a>';
+		    	inner += '<input type="hidden" id="convert_kg_yncommon" name="convert_kg_yncommon" value=""/>';
+		    	$("#"+data).append(inner);
+	    	}
+	    	$("#"+data).show();
+	    }
+	});
+}
+
+function goSearchCommon() {
+	var type = $("#searchCommType").val();
+	var searchUrl = $("#searchCommUrl").val();
+	searchUrl += "&productclscode=" + $("#productclscodecommon").val();
+	if(type == 'A'){
+		searchUrl += "&regday=" + $("#regdaycommon").val();
+	}else if(type == 'B'){
+		searchUrl += "&startday=" + $("#startdaycommon").val();
+		searchUrl += "&endday=" + $("#enddaycommon").val();
+	}else if(type == 'C'){
+		searchUrl += "&yyyy=" + $("#yyyyCcommon").val();
+		searchUrl += "&start_mmdd=" + $("#start_mmddcommon").val();
+	}else if(type == 'D'){
+		searchUrl += "&yyyy=" + $("#yyyyDcommon").val();
+		searchUrl += "&period=" + $("#periodcommon").val();
+	}else if(type == 'E'){
+		searchUrl += "&yyyy=" + $("#yyyyEcommon").val();
+		searchUrl += "&mm=" + $("#mmcommon").val();
+	}
+	var rankcommon = $("#rankcommon").val();
+	if(rankcommon == "Y"){
+		searchUrl += "&productrankcode=" + $("#productrankcodecommon").val();
+	}else{
+		searchUrl += "&graderank=" + $("#graderankcommon").val();
+	}
+	searchUrl += "&itemcategorycode=" + $("#itemcategorycodecommon").val();
+	searchUrl += "&itemcode=" + $("#itemcodecommon").val();
+	searchUrl += "&kindcode=" + $("#kindcodecommon").val();
+	searchUrl += "&countycode=" + $("#countycodecommon").val();
+	searchUrl += "&convert_kg_yn=" + $("#convert_kg_yncommon").val();
+	
+	location.href = searchUrl;
+}

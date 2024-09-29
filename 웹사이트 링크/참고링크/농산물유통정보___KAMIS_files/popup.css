@@ -1,0 +1,71 @@
+@charset "utf-8";
+
+/* popup */
+.popup_box {border:0px; width:100%;}
+.popup_box .content { padding:0px; background-color:#FFF; color:#000; }
+.popup_box .content p {line-height:17px; padding:0;}
+.popup_box .title {
+	height:20px;
+	
+	/*background-color:#515152;
+	padding:10px 10px 10px 10px;*/
+	font-weight:bold;
+	color: #FFF;
+}
+.popup_box .footer {
+	height:24px;
+	background-color:#fff;
+	padding:5px 5px 5px 5px;
+	font-weight:bold;
+	color: #FFF;
+	font-size:11px;
+}
+
+.popup_box .footer label{
+	color: #515152;
+	font-size:12px;
+	}
+
+
+.popup_box .title h2 {float:left; width:230px; padding:0; margin:0; color:#fff;}
+.popup_box .title .close {
+	float:right;
+	color: #FFFFFF;
+}
+
+
+.popup_box ul{
+	background:url(http://www.at.or.kr/images/commons/voc/common/popup_bg.gif) 0 repeat;
+	border:0px solid #afafaf;
+	padding:5px 5px 5px 5px;
+}
+.popup_box .div_box{
+	background:url(http://www.at.or.kr/images/commons/voc/common/popup_bg.gif) 0 repeat;
+	border:0px solid #afafaf;
+	padding:5px 5px 5px 5px;
+}
+
+
+.popup_box .footer span{
+	float:right;
+	color: #FFFFFF;
+	font-size:12px;
+	vertical-align:top;
+	padding-top:0px;
+}
+
+.contents span{
+	background:#00abbe;
+	color:#ffffff;
+	font-weight:bold;
+	font-size:1.2em;
+}
+
+/* .popup_background1 img{width:400px;} */
+/* .popup_background2 img{width:943px;} */
+
+
+
+
+
+

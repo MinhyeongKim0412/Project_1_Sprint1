@@ -1,0 +1,43 @@
+/**
+ * 엑셀파일 생성 객체 정의
+ */
+$(function() {
+	Domestic.init();
+	$('.excel').click(function() {
+		Domestic.makeExcel($(this));
+	});
+});
+
+var Domestic = {
+	/**
+	 * default method!!!
+	 */
+	init : function() {
+	},
+	/**
+	 * 엑셀 파일 데이터 생성
+	 * @param.$p_this : Excel 파일을 생성할 데이터
+	 */
+	makeExcel : function($p_this) {
+		try {
+			var $this			 = $p_this;
+			var $form			 = $('#frm_excel');
+			var $excel_plaindata = $form.children('.excel_data');
+			var l_data			 = $('#excel_contents').find('table').html();
+			var l_url			 = location.protocol+'//'+location.hostname+(location.port ? ':'+location.port: '');
+
+			// 이미지 파일은 절대경로를 추가한다.
+			l_data = l_data.replace(/src=\"\/images/g, 'src="'+l_url+'/images');
+			l_data = l_data.replace(/&nbsp;/g, '');
+
+			// 엑셀 파일로 생성할 데이터 값 변수 저장 및 폼전송
+			$excel_plaindata.val(l_data);
+			$form.submit();
+
+			// 폼전송한 데이터를 삭제
+			$excel_plaindata.val('');
+		} catch(e) {
+			alert("[/js/customer/circulation/domestic.js's Domestic.makeExcel] " + e.description);
+		}
+	}
+}

@@ -1,0 +1,17 @@
+site: http://10.10.21.78:8080/
+
+DB:
+호스트: 10.10.21.61
+사용자명: kyh
+비밀번호: 1234
+
+GitHub: https://github.com/ansh8777/kyhshop
+
+ID/PW:
+-관리자: admin / admin
+-구매자: user / 123
+-판매자: seller3 / 123
+
+Notion:
+프로젝트 캘린더: https://m1nbr0project.notion.site/c71f52a8985440e48d8e076a6a97b997?v=85f24fdbb41943faa709ecaaa22473e0&pvs=4
+진행상황공유: https://m1nbr0project.notion.site/7193fb50cd074aa3a370e4c745db4737?pvs=4

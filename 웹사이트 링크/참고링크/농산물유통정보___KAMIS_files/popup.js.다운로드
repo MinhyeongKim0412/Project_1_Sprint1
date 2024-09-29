@@ -1,0 +1,69 @@
+/***********************************************
+ * aT Project atPopup JavaScript Core
+ */
+if(window.atPopup == null){
+	window.atPopup = {
+		
+		/**
+		 * 팝업 이미지 경로 변경
+		 */
+		changePopupImgSrc : function( obj, idx ) {
+			popupCnt = $( "#popupListBox" ).children().length;
+
+			var imgPath;
+			var imgName;
+			var pathLast;
+			for(i = 1; i <= popupCnt; i++) {
+				pathLast = $( "#popupNum" + i ).attr('src').lastIndexOf("/");
+				imgPath = $( "#popupNum" + i ).attr('src').substring(0, pathLast + 1);
+				imgName = $( "#popupNum" + i ).attr('src').substring(pathLast + 1, $( "#popupNum" + i ).attr('src').length);
+
+				if( i == idx ) {
+					$( "#popupNum" + i ).attr('src', imgPath + imgName.replace('off', 'on'));
+					$( "#popupImg_" + i ).show();
+				} else {
+					
+					$( "#popupNum" + i ).attr('src', imgPath + imgName.replace('on', 'off'));
+					$( "#popupImg_" + i ).hide();
+				}
+			}
+		},
+		
+		/**
+		 * 팝업 쿠키값 조회
+		 */
+		getPopupCookie : function( popupName ) {
+			var nameOfCookie = popupName + "=";
+			var x = 0;
+			var popupValue = "";
+			while ( x <= document.cookie.length ) {
+				var y = ( x + nameOfCookie.length);
+				if ( document.cookie.substring( x, y ) == nameOfCookie ) {
+					if ( (endOfCookie=document.cookie.indexOf( ";", y )) == -1 )
+						endOfCookie = document.cookie.length;
+					popupValue = unescape( document.cookie.substring( y, endOfCookie ) );
+					//alert("popupValue ====" + popupValue);
+				}
+				x = document.cookie.indexOf( " ", x ) + 1;
+				if ( x == 0 ) break;
+			}
+			// 설정 쿠키값이 없는 경우 팝업레이어 출력함.
+			if( popupValue == "" ) {				
+				$( "div[id=" + popupName + "]" ).show();
+			}
+		},
+	
+		/**
+		 * 팝업 쿠키 설정[하루동안 열지 않음]
+		 */
+		setPopupCookie : function( popupName ) {
+			var todayDate = new Date();
+			todayDate.setDate( todayDate.getDate() + 1 );
+			// 쿠키 설정
+			document.cookie = popupName + "=" + escape( "done" ) + "; path=/; expires=" + todayDate.toGMTString() + ";"
+			//alert("############## = " + document.cookie);
+			// 해당 레이어 닫기
+			$( "div[id=" + popupName + "]" ).hide();
+		}
+	};
+}

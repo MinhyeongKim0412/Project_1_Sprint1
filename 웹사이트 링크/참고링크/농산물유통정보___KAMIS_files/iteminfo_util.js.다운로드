@@ -1,0 +1,541 @@
+/**
+ * 부류/품목/품종 유틸 객체 정의
+ */
+$(document).ready(function(){
+	if($("#itemcode").val()){
+		$(".focusDiv").eq(0).focus();
+	}
+});
+var IteminfoUtil = function() {
+	var $productclscode = null;
+	var $regday = null;
+	var $startday = null;
+	var $endday = null;
+	var $yyyy = null;
+	var $period = null;
+	var $itemcategorycode = null;
+	var $itemcode = null;
+	var $kindcode = null;
+	var $productrankcode = null;
+	var $countycode = null;
+	var $productrankcode = null;
+	var pepper_all_yn = 'N';
+	var productclscode = '';
+
+	/**
+	 * 초기화
+	 * @param.$regday			: 단일달력 날짜 jquery 객체
+	 * @param.$startday			: 기간달력 날짜 jquery 객체
+	 * @param.$endday			: 기간달력 날짜 jquery 객체
+	 * @param.$yyyy				: 년도 jquery 객체
+	 * @param.$period			: 기간년도 jquery 객체
+	 * @param.$itemcategorycode	: 부류코드 jquery 객체
+	 * @param.$itemcode			: 품목코드 jquery 객체
+	 * @param.$kindcode			: 품종코드 jquery 객체
+	 * @param.$productrankcode	: 등급코드 jquery 객체
+	 * @param.pepper_all_yn		: 건고추 전체(화건), 전체(양건) 조회 여부
+	 * @param.productclscode	: 도매/소매/친환경 구분 코드
+	 */
+	this.init = function(param) {
+		try {
+			$productclscode		= param.$productclscode;
+			$regday				= param.$regday;
+			$startday			= param.$startday;
+			$endday				= param.$endday;
+			$yyyy				= param.$yyyy;
+			$period				= param.$period;
+			$itemcategorycode	= param.$itemcategorycode;
+			$itemcode			= param.$itemcode;
+			$kindcode			= param.$kindcode;
+			$productrankcode	= param.$productrankcode;
+			$countycode			= param.$countycode;
+			$productrankcode	= param.$productrankcode;
+			pepper_all_yn		= param.pepper_all_yn;
+			productclscode		= param.productclscode;
+			
+			if(typeof($regday) == 'object') {
+				// 달력 날짜 변경시 처리
+				$regday.change(function() {
+					_getItemcategorycodeList(_getYearInfo());
+					_getCountycodeList(_getYearInfo());
+				});
+			} else if(typeof($startday) == 'object' && typeof($endday) == 'object') {
+				// 시작 달력 날짜 변경시 처리
+				$startday.change(function() {
+//					_getItemcategorycodeList(_getYearInfo());
+//					_getCountycodeList(_getYearInfo());
+				});
+
+				// 종료 달력 날짜 변경시 처리
+				$endday.change(function() {
+//					_getItemcategorycodeList(_getYearInfo());
+//					_getCountycodeList(_getYearInfo());
+				});
+			} else if(typeof($yyyy) == 'object' && typeof($period) == 'object') {
+				// 연도 변경시 처리
+				$yyyy.change(function() {
+					_getItemcategorycodeList(_getYearInfo());
+					_getCountycodeList(_getYearInfo());
+				});
+
+				// 연도 기간 변경시 처리
+				$period.change(function() {
+					_getItemcategorycodeList(_getYearInfo());
+					_getCountycodeList(_getYearInfo());
+				});
+			} else if(typeof($yyyy) == 'object') {
+				// 달력 날짜 변경시 처리
+				$yyyy.change(function() {
+					_getItemcategorycodeList(_getYearInfo());
+					_getCountycodeList(_getYearInfo());
+				});
+			}
+
+			// 산물분류변경 시 처리
+			if(typeof($productclscode) == 'object') {
+				$productclscode.trigger('change');
+				$productclscode.change(function() {
+					if($productclscode.length == 1){
+						productclscode = $productclscode.val();
+					}else{
+						for(var i=0; i<$productclscode.length; i++){
+							if($productclscode[i].checked == true){
+								productclscode = $($productclscode[i]).val();
+							}
+						}
+					}
+					_getItemcategorycodeList(_getYearInfo());
+					_getItemcodeList($itemcategorycode.val(), _getYearInfo());
+					_getKindcodeList($itemcode.val(), _getYearInfo());
+					_getProductrankcodeList($itemcode.val(), $kindcode.val());
+					_getCountycodeList(_getYearInfo());
+				});
+			}
+
+			// 부류변경 시 처리
+			if(typeof(param.$itemcategorycode) == 'object') {
+				$itemcategorycode.change(function() {
+					_getItemcodeList($itemcategorycode.val(), _getYearInfo());
+				});
+			}
+
+			// 품목변경 시 처리
+			if(typeof(param.$itemcode) == 'object') {
+				$itemcode.change(function() {
+					_getKindcodeList($itemcode.val(), _getYearInfo());
+				});
+			}
+
+			// 품종변경 시 처리
+			if(typeof(param.$kindcode) == 'object') {
+				$kindcode.change(function() {
+					_getProductrankcodeList($itemcode.val(), $kindcode.val());
+				});
+			}
+		} catch(e) {
+			alert("[/js/customer/iteminfo_util.js's IteminfoUtil.init]");
+		}
+	};
+
+	/**
+	 * 부류 코드 목록 조회
+	 * @param param.yyyy		: 년도
+	 * @param param.startyear	: 시작년도
+	 * @param param.endyear		: 종료년도
+	 */
+	var _getItemcategorycodeList = function(param) {
+		try {
+			/*alert("@@@ ==" + jQuery(location).attr('pathname'));*/
+			var l_actionname = '';
+			// 2022.03.29 kamis 개편으로 추가
+			//-----------------------------------------------------------------------------------------------------------------------
+			var retailString = '';
+			
+			const arr1 = jQuery(location).attr('pathname').split("/");
+			
+			for (var i = 0; i < arr1.length; i++) {
+				if ((arr1[i] == "agricultureRetail") || (arr1[i] == "fisheriesRetail") || (arr1[i] == "livestockRetail")) {
+//					retailString = arr1[i];
+					retailString = 'ALL';
+				}
+			}
+			
+			//-----------------------------------------------------------------------------------------------------------------------
+			/*
+			if(param.yyyy && jQuery(location).attr('pathname') != '/customer/price/process/item.do') {
+				l_actionname = 'getItemcategorycodeList';
+			} else if (param.yyyy && jQuery(location).attr('pathname') == '/customer/price/process/item.do') {
+				l_actionname = 'getItemcategorycodeListProc';
+			} else if (jQuery(location).attr('pathname') == '/customer/price/process/period.do') {
+				l_actionname = 'getItemcategorycodeListByPeriodProcess';
+			} else {
+				l_actionname = 'getItemcategorycodeListByPeriod';
+			}*/
+			
+			// 2022.03.29 kamis 개편으로 변경
+			if ((retailString == "agricultureRetail") || (retailString == "fisheriesRetail") || (retailString == "livestockRetail") || (retailString == "ALL")) {
+				l_actionname = 'getItemcategorycodeListByRetail';
+			} else if(param.yyyy && jQuery(location).attr('pathname') != '/customer/price/process/item.do') {
+				l_actionname = 'getItemcategorycodeList';
+			} else if (param.yyyy && jQuery(location).attr('pathname') == '/customer/price/process/item.do') {
+				l_actionname = 'getItemcategorycodeListProc';
+			} else if (jQuery(location).attr('pathname') == '/customer/price/process/period.do') {
+				l_actionname = 'getItemcategorycodeListByPeriodProcess';
+			} else {
+				l_actionname = 'getItemcategorycodeListByPeriod';
+			}
+
+			$itemcategorycode.val('100');
+			
+			if(typeof($itemcategorycode) == 'object') {
+				$('#ulitemcategorycode').configSelectBox({
+					'url' : '/common/pr_priceinfo_codelist.do?action=' + l_actionname
+					,'querystring' : 'productclscode=' + productclscode + '&yyyy=' + param.yyyy + '&startyear=' + param.startyear + '&endyear=' + param.endyear + '&retailString=' + retailString
+					,'id' : 'itemcategorycode'
+					,'callback' : function(selectedCode) {
+						try {
+							$("#itemcategorycode").val(selectedCode);
+							$itemcategorycode.val(selectedCode);
+							/*$("#ulitemcategorycode").val('');*/
+							_getItemcodeList($itemcategorycode.val(), param);
+						} catch(e) {
+							alert("[/js/common/iteminfo_util.js's _getItemcategorycodeList.callback]");
+						}
+					}
+				});
+			}
+		} catch(e) {
+			alert("[/js/customer/iteminfo_util.js's IteminfoUtil._getItemcategorycodeList]" + e);
+		}
+	};
+
+	/**
+	 * 품목 코드 목록 조회
+	 * @param p_itemcategorycode	: 부류코드
+	 * @param param.yyyy			: 년도
+	 * @param param.startyear		: 시작년도
+	 * @param param.endyear			: 종료년도
+	 */
+	var _getItemcodeList = function(p_itemcategorycode, param) {
+		try {
+			var l_actionname = '';
+			
+			// 2022.03.29 kamis 개편으로 추가
+			//-----------------------------------------------------------------------------------------------------------------------
+			var retailString = '';
+			var checkLivestockRetailOld = '';
+			
+			//2024.02.20 추가 KSH 카미스개편 추가
+			if($itemcategorycode.val() == "100" || $itemcategorycode.val() == "200" || $itemcategorycode.val() == "300" || $itemcategorycode.val() == "400"  ){
+				retailString = "agricultureRetail"
+			}
+			if($itemcategorycode.val() == "500"){
+				retailString = "livestockRetail"
+			}
+			if($itemcategorycode.val() == "600"){
+				retailString = "fisheriesRetail"
+			}
+			
+			const arr1 = jQuery(location).attr('pathname').split("/");
+			
+			for (var i = 0; i < arr1.length; i++) {
+				if ((arr1[i] == "agricultureRetail") || (arr1[i] == "fisheriesRetail") || (arr1[i] == "livestockRetail")) {
+					retailString = arr1[i];
+				}
+				
+				// 축산물 과거가격자료는 건너 뛰어야함
+				if (arr1[i] == "old") {
+					checkLivestockRetailOld = arr1[i];
+				}
+			}
+			//-----------------------------------------------------------------------------------------------------------------------
+			/*
+			if (param.yyyy) {
+				l_actionname = 'getItemcodeList';
+			} else {
+				l_actionname = 'getItemcodeListByPeriod';
+			}*/
+			if(jQuery(location).attr('pathname').indexOf("old") > 0){
+				retailString = "livestockRetail";
+				checkLivestockRetailOld = "old";
+			}
+			
+			if ((retailString == "livestockRetail" && checkLivestockRetailOld != "old" && $itemcategorycode.val() === '500') || (retailString == "agricultureRetail" && $itemcategorycode.val() === '500')) {
+				l_actionname = 'getLivestockItemcodeList';
+			} else if (param.yyyy) {
+				l_actionname = 'getItemcodeList';
+			} else {
+				l_actionname = 'getItemcodeListByPeriod';
+			}
+			
+			if (typeof($itemcode) == 'object') {
+				$('#ulitemcode').configSelectBox({
+					'url' : '/common/pr_priceinfo_codelist.do?action=' + l_actionname
+					,'querystring' : 'productclscode=' + productclscode + '&itemcategorycode=' + p_itemcategorycode + '&yyyy=' + param.yyyy + '&startyear=' + param.startyear + '&endyear=' + param.endyear
+					,'id' : 'itemcode'
+					,'callback' : function(selectedCode) {
+						try {
+							$("#itemcode").val(selectedCode);
+							$itemcode.val(selectedCode);
+							_getKindcodeList($itemcode.val(), param);
+						} catch(e) {
+							alert("[/js/common/iteminfo_util.js's _getItemcodeList.callback]" + e);
+						}
+					}
+				});
+			}
+		} catch(e) {
+			alert("[/js/customer/iteminfo_util.js's IteminfoUtil._getItemcodeList]");
+			alert(e);
+		}
+	};
+
+	/**
+	 * 품종 코드 목록 조회
+	 * @param p_itemcode		: 품목코드
+	 * @param param.yyyy		: 년도
+	 * @param param.startyear	: 시작년도
+	 * @param param.endyear		: 종료년도
+	 */
+	var _getKindcodeList = function(p_itemcode, param) {
+		try {
+			var l_actionname = '';
+			
+			// 2022.03.29 kamis 개편으로 추가
+			//-----------------------------------------------------------------------------------------------------------------------
+			var retailString = '';
+			var checkLivestockRetailOld = '';
+			var checkFisheriesRetailOld = '';
+			
+			
+			
+			const arr1 = jQuery(location).attr('pathname').split("/");
+			
+			
+			//2024.02.20 추가 KSH 카미스개편 추가
+			if($itemcategorycode.val() == "100" || $itemcategorycode.val() == "200" || $itemcategorycode.val() == "300" || $itemcategorycode.val() == "400"  ){
+				retailString = "agricultureRetail"
+			}
+			if($itemcategorycode.val() == "500"){
+				retailString = "livestockRetail"
+			}
+			if($itemcategorycode.val() == "600"){
+				retailString = "fisheriesRetail"
+			}
+			
+			
+			for (var i = 0; i < arr1.length; i++) {
+
+				if ((arr1[i] == "agricultureRetail") || (arr1[i] == "fisheriesRetail") || (arr1[i] == "livestockRetail")) {
+					retailString = arr1[i];
+				}
+				
+				// 축산물 과거가격자료는 건너 뛰어야함
+				if (retailString == "livestockRetail" && arr1[i] == "old") {
+					checkLivestockRetailOld = arr1[i];
+				} else if (retailString == "fisheriesRetail" && arr1[i] == "old") {
+					checkFisheriesRetailOld = arr1[i];
+				}
+			}
+			
+			if(jQuery(location).attr('pathname').indexOf("old") > 0){
+				retailString = "fisheriesRetail";
+				checkFisheriesRetailOld = "old";
+			}
+			//-----------------------------------------------------------------------------------------------------------------------
+			/*
+			if(param.yyyy) {
+				l_actionname = 'getKindcodeList';
+			} else {
+				l_actionname = 'getKindcodeListByPeriod';
+			}*/
+			
+			if ((retailString == "livestockRetail" && checkLivestockRetailOld != "old" && $itemcategorycode.val() === '500') || (retailString == "agricultureRetail" && $itemcategorycode.val() === '500')) {
+				l_actionname = 'getLivestockKindcodeList';
+			} else if ((retailString.indexOf("Retail") > 0 || window.location.href.indexOf('info/retail/') > 0) && $itemcategorycode.val() === "600") {
+				l_actionname = 'getFisheriesKindcodeList';
+			} else if (param.yyyy) {
+				l_actionname = 'getKindcodeList';
+			} else {
+				l_actionname = 'getKindcodeListByPeriod';
+			}
+			
+			if(typeof($kindcode) == 'object') {
+				
+				$('#ulkindcode').configSelectBox({
+					'url' : '/common/pr_priceinfo_codelist.do?action=' + l_actionname
+					,'querystring' : 'productclscode=' + productclscode + '&itemcode=' + p_itemcode + '&pepper_all_yn=' + pepper_all_yn + '&yyyy=' + param.yyyy + '&startyear=' + param.startyear + '&endyear=' + param.endyear + '&old=' + checkFisheriesRetailOld 
+					,'id' : 'kindcode'
+					,'callback' : function(selectedCode) {
+						try {
+							console.log("selectedCode ::" + selectedCode);
+							$("#kindcode").val(selectedCode);
+							$kindcode.val(selectedCode);
+							_getProductrankcodeList($itemcode.val(), $kindcode.val());
+						} catch(e) {
+							alert("[/js/common/iteminfo_util.js's _getKindcodeList.callback]" + e);
+						}
+					}
+				});
+				$("#kindcode").val('');
+			}
+		} catch(e) {
+			alert("[/js/customer/iteminfo_util.js's IteminfoUtil._getKindcodeList]");
+		}
+	};
+
+	/**
+	 * 등급 코드 목록 조회
+	 * @param p_itemcode : 품목코드
+	 * @param p_kindcode : 품종코드
+	 */
+	var _getProductrankcodeList = function(p_itemcode, p_kindcode) {
+		try {
+			// 2022.03.29 kamis 개편으로 추가
+			//-----------------------------------------------------------------------------------------------------------------------
+			var l_actionname = '';
+			var retailString = '';
+			var checkLivestockRetailOld = '';
+			var checkCatalogue = '';
+			
+			//2024.02.20 추가 KSH 카미스개편 추가
+			if($itemcategorycode.val() == "100" || $itemcategorycode.val() == "200" || $itemcategorycode.val() == "300" || $itemcategorycode.val() == "400"  ){
+				retailString = "agricultureRetail"
+			}
+			if($itemcategorycode.val() == "500"){
+				retailString = "livestockRetail"
+			}
+			if($itemcategorycode.val() == "600"){
+				retailString = "fisheriesRetail"
+			}
+			
+			const arr1 = jQuery(location).attr('pathname').split("/");
+
+			for (var i = 0; i < arr1.length; i++) {
+				if ((arr1[i] == "agricultureRetail") || (arr1[i] == "fisheriesRetail") || (arr1[i] == "livestockRetail")) {
+					retailString = arr1[i];
+				}
+				
+				// 축산물 과거가격자료는 건너 뛰어야함
+				if (arr1[i] == "old") {
+					checkLivestockRetailOld = arr1[i];
+				}
+				
+				// 부류별인 경우
+				if (arr1[i] == "catalogue.do") {
+					checkCatalogue = arr1[i];
+				}
+			}
+			
+			if(jQuery(location).attr('pathname').indexOf("old") > 0){
+				retailString = "livestockRetail";
+				checkLivestockRetailOld = "old";
+			}
+			
+			if ((retailString == "livestockRetail" && checkLivestockRetailOld != "old" && $itemcategorycode.val() === '500') || (retailString == "agricultureRetail" && $itemcategorycode.val() === '500')) {
+				l_actionname = 'getLivestockGradecodeList';
+			} else if(checkCatalogue == "catalogue.do" && jQuery(location).attr('pathname').indexOf('Retail') > 0 || $('#frm_search').attr('action').indexOf('catalogue') > 0){
+				l_actionname = 'getRanklistByItemCatalogue';
+			}else {
+				l_actionname = 'getRanklistByItem';
+			}
+			//-----------------------------------------------------------------------------------------------------------------------
+			
+			if(typeof($productrankcode) == 'object') {
+				$('#ulproductrankcode').configSelectBox({
+					//'url' : '/common/pr_priceinfo_codelist.do?action=getRanklistByItem'
+					'url' : '/common/pr_priceinfo_codelist.do?action=' + l_actionname		// 2022.03.29 kamis 개편으로 변경
+					,'querystring' : 'productclscode=' + productclscode + '&itemcode='+ p_itemcode +'&kindcode=' + p_kindcode
+					,'id' : 'productrankcode'
+					,'productclscode' : productclscode
+					,'callback' : function(selectedCode) {
+						try {
+							$("#productrankcode").val(selectedCode);
+							$productrankcode.val(selectedCode);
+						} catch(e) {
+							alert("[/js/common/iteminfo_util.js's _getProductrankcodeList.callback]" + e);
+						}
+					}
+				});
+				/* 2021.10.19 alert 해제 요청
+				if(p_itemcode == '411' && p_kindcode == '05') {
+					alert("현재 소비되는 사과(후지)는 2020년에 생산된 저장 사과입니다.");
+				} 
+				*/
+				//2021.09.07 alert 해제 요청
+				//else if(p_itemcode == '412' && p_kindcode == '01') {
+				//	alert("현재 소비되는 배(신고)는 2020년에 생산된 저장 배입니다.");
+				//}
+			}
+		} catch(e) {
+			alert("[/js/customer/iteminfo_util.js's IteminfoUtil._getProductrankcodeList]");
+		}
+	};
+	
+	/**
+	 * 연도 변경에 따른 지역코드 변경
+	 */
+	var _getCountycodeList = function(param) {
+		try {
+			var l_actionname = '';
+			if(param.yyyy) {
+				l_actionname = 'getCountycodeList';
+			} else {
+				l_actionname = 'GetCountycodeListByPeriod';
+			}
+			if(typeof($countycode) == 'object') {
+				$('#ulcountycode').configSelectBox({
+					 url : '/common/pr_priceinfo_codelist.do?action=' + l_actionname
+					,querystring : 'useyn=Y' + '&productclscode=' + productclscode + '&yyyy=' + param.yyyy + '&startyear=' + param.startyear + '&endyear=' + param.endyear
+					,id : 'countycode'
+				});
+				$("#countycode").val('');
+			}
+		} catch(e) {
+			alert("[/js/common/iteminfo_util.js's IteminfoUtil._getCountycodeList]");
+		}
+	};
+
+	/**
+	 * 년도 정보를 json 포맷으로 반환하는 함수
+	 */
+	var _getYearInfo = function() {
+		var returnvalue = {'yyyy':'', 'startyear':'', 'endyear':''};
+		try {
+			if(typeof($regday) == 'object') {
+				returnvalue.yyyy = $regday.val().substring(0, 4);
+				returnvalue.startyear = '';
+				returnvalue.endyear = '';
+			} else if(typeof($startday) == 'object' && typeof($endday) == 'object') {
+				returnvalue.yyyy = '';
+				returnvalue.startyear = $startday.val().substring(0, 4);
+				returnvalue.endyear = $endday.val().substring(0, 4);
+			} else if(typeof($yyyy) == 'object' && typeof($period) == 'object') {
+				returnvalue.yyyy = '';
+				returnvalue.startyear = (Number($yyyy.val()) - Number($period.val()));
+				returnvalue.endyear = $yyyy.val();
+			} else if(typeof($yyyy) == 'object') {
+				returnvalue.yyyy = $yyyy.val();
+				returnvalue.startyear = '';
+				returnvalue.endyear = '';
+			}
+		} catch(e) {
+			alert("[/js/customer/iteminfo_util.js's IteminfoUtil._getYearInfo]");
+		}
+		return returnvalue;
+	};
+};
+
+function goSearch() {
+	$('#frm_search').submit();
+}
+
+/**
+ * 로딩화면 추가
+ */
+//window.onbeforeunload = function () {fncLoadingStart();}
+$(document).ready(function(){
+	$(".loading").hide();
+	
+	$("#btn_search, .no_data > a").on("click", function(){fncLoadingStart();})
+});

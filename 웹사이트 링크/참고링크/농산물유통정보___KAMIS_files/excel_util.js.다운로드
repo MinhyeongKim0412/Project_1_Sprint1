@@ -1,0 +1,72 @@
+/**
+ * 엑셀파일 생성 객체 정의
+ */
+function goExcel(num){
+	ExcelUtil.makeExcel(num);
+	setTimeout(function(){$('.loading').hide();}, 300);
+}
+function setTableHtml(num){
+	$this = $('#itemTable_'+num);
+	$this.find('th[style*="display: none"]:not(.hidden_tr)').remove();
+
+	// td 태그 안에 삽입되어있는 a태그 제거
+	$this.find('td').each(function(){
+		let anchor = $(this).find('a');
+		
+		if(anchor.length > 0)
+			$(this).html(anchor.text());
+	});
+	
+	// 세로 스크롤로 인해 분리된 thead 기존 테이블에 삽입
+	if($("#itemTable_" + num + "_head")){
+		$("#itemTable_" + num + " > thead").html($("#itemTable_" + num + "_head > thead").html())
+	}
+	// 상세정보 더보기로 인해 분리된 tbody 기존 테이블에 삽입
+	if($("#itemTable_" + num + "_detail").parent().css("display") === 'block'){
+		$("#itemTable_" + num + " > tbody").append($("#itemTable_" + num + "_detail > tbody").html())
+	}
+	
+	return $this.html();
+}
+var ExcelUtil = {
+	/**
+	 * 엑셀 파일 데이터 생성
+	 * @param.$p_this : Excel 파일을 생성할 데이터
+	 */
+	makeExcel : function(num) {
+		try {
+			var $this			 = $('#itemTable_'+num);
+			var $form			 = $('#frm_excel');
+			var $excel_plaindata = $form.children('.excel_data');
+			var l_origin_data 	 = $this.html();
+			var l_data			 = setTableHtml(num);
+			var l_url			 = location.protocol+'//'+location.hostname+(location.port ? ':'+location.port: '');
+			
+			if($this.length === 0){
+				alert('검색조건에 해당하는 데이터가 없습니다.');
+				return false;
+			}
+				
+			// 이미지 파일은 절대경로를 추가한다.
+			l_data = l_data.replace(/src=\"\/images/g, 'src="'+l_url+'/images');
+			l_data = l_data.replace(/&nbsp;/g, '');
+			
+			// 할인 이미지 텍스트로 변경
+			l_data = l_data.replaceAll('<img src="http://kamis.or.kr/images/customer/ico_sale.png" alt="할인">', 'ⓢ');
+
+			// 엑셀 파일로 생성할 데이터 값 변수 저장 및 폼전송
+			$excel_plaindata.val(l_data);
+			
+			$form.submit();
+
+			// 폼전송한 데이터를 삭제
+			$excel_plaindata.val('');
+			
+			// 원본 table html
+			$this.html(l_origin_data);
+
+		} catch(e) {
+			alert("[/js/customer/excel_util.js's ExcelUtil.makeExcel] " + e.description);
+		}
+	}
+}

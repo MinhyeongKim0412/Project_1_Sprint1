@@ -1,0 +1,142 @@
+$(function() {
+	GoogleAnalytics.init();
+	$('.gnb ul li').mouseover(function() {
+		var activeTab = $(this).attr('data-tab');
+		$('.gnb ul li').removeClass('current');
+		$('.gnb_sub').removeClass('current');
+		$(this).addClass('current');
+		$('#' + activeTab).addClass('current');
+	})
+
+	$('.gnb_sub').mouseleave(function() {
+	 	$(this).removeClass('current');
+		$('.gnb ul li').removeClass('current');
+	})
+
+	$('.tbl_srch_comn .radioArea input[type=radio]').click(function() {
+		var activeTab = $(this).attr('data-tab');
+		$('.tbl_srch_comn .radioArea input').removeClass('current');
+		$('.srchTxtArea').removeClass('current');
+		$(this).addClass('current');
+		$('#' + activeTab).addClass('current');
+	})
+	$('ul.tab_arc li').click(function() {
+		var activeTab = $(this).attr('data-tab');
+		$('ul.tab_arc li').removeClass('current');
+		$('.tbl_tabArea').removeClass('current');
+		$(this).addClass('current');
+		$('#' + activeTab).addClass('current');
+	})
+});
+
+/*******  화면 확대 축소 - 1023 김상훈 *******/
+var curSize = 1.0;	//현재비율
+var maxSize = 5.0;	//최대비율(5배)
+var minSize = 0.8;	//최소비율
+var Zoom = {
+	In : function() {
+		if (curSize < maxSize) {
+			curSize += 0.1;
+		} else {
+			return;
+		}
+		Zoom.op();
+	},
+
+	Out : function() {
+		if (curSize > minSize) {
+			curSize -= 0.1;
+		} else {
+			return;
+		}
+		Zoom.op();
+	},
+
+	Default : function() {
+		curSize = 1.0;
+		Zoom.op();
+	},
+
+	op : function() {
+		var _body = document.body;
+		if (jQuery.browser.msie) {
+			_body.style.zoom = curSize;
+		} else {
+			$('body').css('zoom', curSize);
+			$('body').css('-webkit-transform', 'scale(' + (curSize) + ')');
+			$('body').css('-webkit-transform-origin', '0 0');
+			$('body').css('-moz-transform', 'scale(' + (curSize) + ')');
+			$('body').css('-moz-transform-origin', '0 0');
+			$('body').css('-o-transform', 'scale(' + (curSize) + ')');
+			$('body').css('-o-transform-origin', '0 0');
+		}
+	}
+}
+
+/** 이광호 추가 메뉴!! **/
+$(document).ready(function(){
+	$(".snb_menu > li").each(function(){
+		if($(this).find("> a").next().length > 0) {
+			$(this).find("> a").attr("href", "javascript:void(0);");
+			$(this).find("> a").append("<i class='ico snb arrow current'></i>");
+		}
+	});
+
+	// left 메뉴 현재 화면만 활성화, 로케이션
+	$(".snb_menu a").each(function(){
+		var url = location.pathname + location.search;
+
+		if(url.indexOf($(this).attr("href")) > -1) {
+			$(this).parents("li").addClass("on");
+		}
+	});
+
+	var locationText = "";
+	$(".snb_menu li.on").each(function(){
+		locationText += $(this).find("> a").text() + " > ";
+	});
+
+	$(".lnb").text($(".snb_tit").text() + " > " + locationText.substring(0, locationText.length - 2));
+	
+	/** page_top **/
+	$("ul.gnb ul.dp2 > li").each(function(){
+		if($(this).text() === $(".page_tit").text()) {
+			$(".depth1").attr("href", $(this).closest('ul').prev().attr("href"));
+			$(".depth2").attr("href", $(this).find("> a").attr("href"));
+		}
+	});
+	/** tab menu **/
+	$("ul.list ul.dp2 > li > a").each(function(){
+		if($(this).text() === $(".depth2").text() && $(".depth3").length > 0) {
+			$(this).siblings(".dp3").find("li").each(function(index){
+				let on = $(this).text() === $(".depth3").text() ? 'on' : '';
+				$(".basic > .tab_menu").append('<li id="tab1_0' + (index + 1) + '" class="' + on + '"><a href="' + $(this).find("> a").attr("href") + '">' + $(this).text() + '</a></li>')
+			});
+		}
+	});
+
+	//snb
+	$('.snb_menu > li').click(function(){
+		$('.snb_menu > li').not($(this)).removeClass('on');
+		$(this).addClass('on');
+	});
+	$('.snb_menu li ul li').click(function(){
+		$('.snb_menu li ul li').not($(this)).removeClass('on');
+		$(this).addClass('on');
+	});
+});
+function fncLoadingStart(){
+	window.scrollTo({top: 0, behavior: 'instant'});
+	$('body').addClass('no_scroll');
+	$('.loading').show();
+}
+function fncLoadingEnd(){
+	$('body').removeClass('no_scroll');
+	$('.loading').hide();
+}
+var GoogleAnalytics = {
+	init : function() {
+		// 2023.01.18 웹사이트 분석 고도화에 따른 내용 변경 (GA3 -> GA4로 업그레이드)
+		$('head').prepend('<script async src="https://www.googletagmanager.com/gtag/js?id=G-8CD1P6L7J7"></script><script>window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag(\'js\', new Date());gtag(\'config\', \'G-8CD1P6L7J7\', {\'content_group\':\'KAMIS\'});gtag(\'config\', \'G-1C6GSRP5Z8\', {\'content_group\':\'KAMIS\'});</script>');
+	}
+}

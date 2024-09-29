@@ -1,0 +1,130 @@
+var options;
+
+$(function() {
+	// 차트레이어 닫기 클릭
+	$('#btn_close').click(function() {
+		Charts.closeLayer();
+	});
+});
+
+$(document).ready(function() {
+	options = {
+			chart: {
+	            type: 'line'
+	        },
+	        exporting: {
+	        	enabled: false 
+	        },
+			legend: {
+	            layout: 'vertical',
+	            align: 'right',
+	            verticalAlign: 'middle',
+	            borderWidth: 0
+	        },
+			title: {
+				text: '',
+				x: -20 //center
+			},
+			xAxis: {
+				categories: []
+			},
+			yAxis: {
+				title: {
+	                text: ''
+	            },
+	            labels: {
+	                formatter: function () {
+	                	return Highcharts.numberFormat(this.value,0,',',',');
+	                }
+	            },
+	            plotLines: [{
+	                value: 0,
+	                width: 1,
+	                color: '#808080'
+	            }]
+	        },
+	        plotOptions: {
+	        	area: {
+	            	marker: {
+	                    enabled: false,
+	                    symbol: 'circle',
+	                    radius: 2,
+	                    states: {
+	                        hover: {
+	                            enabled: true
+	                        }
+	                    }
+	                }
+	            }
+	        },
+	        tooltip: {
+	        	useHTML: true,
+	        	formatter: function () {
+	        		var text = '';
+	        		text = this.x + "<br>" + "<span style='color:"+this.series.color+";'>\u25CF</span> " + this.series.name + " : <b>" + Highcharts.numberFormat(this.y,0,',',',') + "</b>";
+	                return text;
+	            }
+	        },
+			series: [] 
+		}
+});
+
+function goChart(num){
+	Charts.show(num);
+}
+
+var Charts = {
+	/**
+	 * 차트레이어 닫기
+	 */
+	closeLayer : function() {
+		try {
+			// IFrame의 경우 처리
+			$(window.parent.document).closeIfrmaeLayer();
+		} catch(e) {
+			alert("[/js/customer/price/retail/period_monthly.js's Charts.closeLayer]" + e.message);
+		}
+	},
+
+	show : function(num) {
+		try {
+			var l_url = '/customer/price/retail/period.do?action=monthlyChartByAjax&rank='+num;
+			$.ajax({
+				type : 'post'
+				, url : l_url
+				, data : $("#frm_search").serialize()
+				, dataType : 'json'
+				, contentType: "application/x-www-form-urlencoded; charset=UTF-8"
+				, success : function(p_data) {
+					if(p_data['categories'].length > 0){
+						options.title.text = p_data['caption'];
+						options.xAxis.categories = JSON.parse(p_data['categories2']);
+						options.series = JSON.parse(p_data['data2']);
+						$('#chartTable_'+num).highcharts(options);
+					}
+				}, error : function(xhr, errmsg, errobj) {
+					console.log(errmsg);
+				}
+			});
+		} catch(e) {
+			alert("[/js/customer/price/retail/period_monthly.js Charts.showChart]" + e.message);
+		}
+	},
+
+	/**
+	 * 로딩 레이어 호출
+	 * @param p_message : 전송 메시지
+	 */
+	openLoadingLayer : function(p_message) {
+		try {
+			// 로딩 레이어 호출
+			$('body').openIframeLayer({
+				 'url'    : '/monitor/common/layer.do?action=loading&message_type=' + p_message
+				,'width'  : 423
+				,'height' : 121
+			});
+		} catch(e) {
+			alert("[/js/customer/price/retail/period_monthly.js Charts.openLoadingLayer] " + e.description);
+		}
+	}
+}

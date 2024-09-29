@@ -1,0 +1,314 @@
+// 페이지
+function getPaging(no){
+	$("#page").val(no);
+	document.frm.submit();
+}
+
+// 공백, null 체크
+function fn_is_blank(value) {
+    if ( null==value || ""==value || "undefined"==value )
+        return true;
+    return false;
+}
+
+// 이메일 체크
+function isEmail(email) {
+	var pattern = /^[0-9a-zA-Z]([-_\.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_\.]?[0-9a-zA-Z])*\.[a-zA-Z]{2,3}$/;
+	return pattern.test(email);
+}
+
+// 숫자 체크
+function onlyNumber(){
+	event = event || window.event;
+	var statusKey = "";
+
+	if (((event.keyCode >= 47) && (event.keyCode <= 57)) || ((event.keyCode >= 96) && (event.keyCode <= 105)) || (event.keyCode == 8) || (event.keyCode == 9) || (event.keyCode == 144)){
+		statusKey = false;
+	}
+	else{
+		statusKey = true;
+	}
+
+    if(event.shiftKey || event.shiftLeft){
+        statusKey = true;
+    }
+
+    if(statusKey){
+        if(event.preventDefault){
+            event.preventDefault();   //moz
+        }
+        else{
+            event.returnValue = false; //IE
+        }
+    }
+}
+
+//비밀번호 체크
+function isPwd(pwd){
+	var pattern = /^.*(?=.*\d)(?=.*[a-zA-Z])(?=.*[!@#$%^&+=]).*$/;
+	return pattern.test(pwd);
+}
+
+// 팝업_resize no
+function openPop(url, name, w, h){
+	window.open(url, name, 'width='+ w +', height='+ h +', top=0, left=0, scrollbars=no, resizable=no');
+}
+
+// 팝업_resize 변경
+function openPop2(url, name, w, h, s, r){
+	window.open(url, name, 'width='+ w +', height='+ h +', top=0, left=0, scrollbars='+ s +', resizable='+ r);
+}
+
+// 팝업_센터
+function openPopCenter(urls, winname, w, h, scrollopt) {
+    var wl = (window.screen.width/2)  - (w/2 + 10);
+    var wt = (window.screen.height/2) - (h/2 + 50);
+    var opts = "status=no,height="+ h +",width="+ w +",resizable=no,left="+ wl +",top="+ wt +",screenX="+ wl +",screenY="+ wt +",scrollbars="+ scrollopt;
+    popwin = window.open( urls, winname, opts );
+    if (popwin) popwin.focus();
+    return popwin;
+}
+
+// sns
+var sns = {
+	facebook : function() {
+		var parms = getParam();
+		var url = 'https://www.facebook.com/sharer/sharer.php?u='+ encodeURIComponent(parms);
+		var opt = 'left=0, top=0, width=650, height=400, scrollbars=0, resizable=1';
+		window.open(url, '_fb', opt);
+	},
+	tweet : function() {
+		var parms = getParam();
+		var url = 'https://twitter.com/intent/tweet?text='+ $(".board-view-area > .board-tit > p > span").text() +'&original_referer'+ encodeURIComponent(parms)+ '&source=tweetbutton';
+		url += '&url=' + encodeURIComponent(parms);
+		var opt = 'left=0, top=0, width=650, height=400, scrollbars=0, resizable=1';
+		window.open(url, '_tw', opt);
+	}
+};
+
+function getParam(){
+	var parms = "";
+	if (document.frm){
+		if (frm.searchCategory){parms +="searchCategory="+ frm.searchCategory.value +"&";}
+		if (frm.searchTerms){parms +="searchTerms="+ frm.searchTerms.value +"&";}
+		if (frm.searchWord){parms +="searchWord="+ encodeURIComponent(frm.searchWord.value) +"&";}
+		if (frm.pageNo){parms +="pageNo="+ frm.pageNo.value +"&";}
+		if (frm.aIdx){if (frm.aIdx.value != null && frm.aIdx.value != '')parms +="aIdx="+ frm.aIdx.value +"&";}
+		if (parms.length > 0){
+			parms=parms.substring(0, parms.length - 1);
+		}
+	}
+	else if (document.sfrm) {
+		if (sfrm.pageNum) {parms +="pageNum="+ sfrm.pageNum.value +"&";}
+		if (sfrm.pageSize) {parms +="pageSize="+ sfrm.pageSize.value +"&";}
+		if (sfrm.bltnScrpNo) {parms +="bltnScrpNo="+ sfrm.bltnScrpNo.value +"&";}
+		if (sfrm.faqNo) {parms +="faqNo="+ sfrm.faqNo.value +"&";}
+		if (sfrm.cn) {parms +="cn="+ sfrm.cn.value +"&";}
+		if (sfrm.st) {parms +="trgtpsnNo="+ sfrm.st.value +"&";}
+		if (sfrm.vocNo) {parms +="vocNo="+ sfrm.vocNo.value +"&";}
+		if (sfrm.vocSctCd) {parms+="vocSctCd="+ sfrm.vocSctCd.value +"&";}
+		if (sfrm.glsNo) {parms +="glsNo="+ sfrm.glsNo.value +"&";}
+		if (parms.length > 0){
+			parms=parms.substring(0, parms.length - 1);
+		}
+	}
+
+	if (document.location.href.indexOf("?") > -1){
+		parms = document.location.href + parms;
+	}
+	else{
+		if (parms.length > 0){
+			parms = document.location.href +"?"+ parms;
+		}
+		else{
+			parms = document.location.href;
+		}
+	}
+
+	return parms;
+}
+
+// 쿠키 저장
+function setCookie(name, value, expiredays){
+	var todayDate = new Date();
+	todayDate.setDate(todayDate.getDate() + expiredays);
+	document.cookie = name +"="+ escape(value) +"; path=/; expires="+ todayDate.toGMTString() +";";
+}
+
+// 쿠키 불러오기
+function getCookie(name) {
+	name += "=";
+	startpos = document.cookie.indexOf(name);
+	if (startpos >= 0) {
+		startpos += name.length;
+		endpos = document.cookie.indexOf(";", startpos);
+		if (endpos == -1) endpos = document.cookie.length;
+		return unescape(document.cookie.substring(startpos, endpos));
+	}
+}
+
+// 주소찾기
+function jusoCallBack(roadFullAddr, roadAddrPart1, addrDetail, roadAddrPart2, engAddr, jibunAddr, zipNo, admCd, rnMgtSn, bdMgtSn) {
+//	document.form.roadFullAddr.value = roadFullAddr;
+//	document.form.roadAddrPart1.value = roadAddrPart1;
+//	document.form.roadAddrPart2.value = roadAddrPart2;
+//	document.form.addrDetail.value = addrDetail;
+//	document.form.engAddr.value = engAddr;
+//	document.form.jibunAddr.value = jibunAddr;
+//	document.form.zipNo.value = zipNo;
+//	document.form.admCd.value = admCd;
+//	document.form.rnMgtSn.value = rnMgtSn;
+//	document.form.bdMgtSn.value = bdMgtSn;
+	document.getElementById('roadZipcode').value = zipNo;
+	document.getElementById('roadAddr1').value = engAddr;
+	document.getElementById('roadAddr2').value = addrDetail;
+}
+
+function isDateCheck(el){
+	var pattern = /\b\d{4}[\-]\d{1,2}[\-]\d{1,2}\b/;
+	return (pattern.test(el)) ? true : false;
+}
+
+//통합게시판 쿠키저장
+function setViewNews(name, array) {
+	setCookie(name, JSON.stringify(array));
+}
+
+//통합게시판 쿠키불러오기
+function getViewNews(name) {
+	if(getCookie(name) == undefined) {
+		return [];		
+	} else {
+		return JSON.parse(getCookie(name));
+	}
+}
+
+function resetTodaySee(){
+	setCookie('subject', JSON.stringify([]));
+	setCookie('link', JSON.stringify([]));
+	setCookie('date', JSON.stringify([]));
+	setCookie('seq', JSON.stringify([]));
+}
+
+//통합게시판 내가본 게시물 가져오기
+function getTodaySee(isViewDate){
+	var rtn_subjectArray = getViewNews('subject');
+	// 신규 (페이지 들어왔을때)
+	var rtn_linkArray = getViewNews('link');
+	// 신규 (페이지 들어왔을때)
+	var rtn_dateArray = getViewNews('date');
+	// 신규 (페이지 들어왔을때)
+	var rtn_seqArray = getViewNews('seq');
+	
+	var todaySeeDataHTML = "";
+	var todaySeeDataDivCnt = Math.ceil(rtn_linkArray.length/5.0,1);
+	
+	var todaySeeDataDivTotCnt = rtn_linkArray.length - 1;
+	
+	for(var b= 0; b < todaySeeDataDivCnt; b++){
+		todaySeeDataHTML +="<ul class='bullet-list'>";
+		for(var i = 0; i < 5; i++ ){			
+			if(rtn_linkArray[todaySeeDataDivTotCnt] == undefined){
+				break;
+			}
+			todaySeeDataHTML +="<li>";
+			todaySeeDataHTML += "<a href='"+rtn_linkArray[todaySeeDataDivTotCnt]+"'>";
+			todaySeeDataHTML += ""+rtn_subjectArray[todaySeeDataDivTotCnt]+"";
+			if(isViewDate) {
+				
+			}
+			todaySeeDataHTML +="</a>";
+			todaySeeDataHTML +="</li>";
+			todaySeeDataDivTotCnt--;	
+		}
+		todaySeeDataHTML +="</ul>";
+	}
+	$("#todaySeePrev").after(todaySeeDataHTML);
+}
+
+function setTodaySee(todaySeeLink, todaySeeSeq, todaySeeSubject, todaySeeDate){
+	var rtn_subjectArray = getViewNews('subject');
+	// 신규 (페이지 들어왔을때)
+	var rtn_linkArray = getViewNews('link');
+	// 신규 (페이지 들어왔을때)
+	var rtn_dateArray = getViewNews('date');
+	// 신규 (페이지 들어왔을때)
+	var rtn_seqArray = getViewNews('seq');
+	
+	var todaySeeChkDup = true;
+	
+	for(i in rtn_linkArray){
+		if(todaySeeSeq == rtn_seqArray[i]) {
+			todaySeeChkDup = false;
+		}
+	}
+	
+	if(todaySeeChkDup) {
+		rtn_subjectArray.push(todaySeeSubject);
+		rtn_linkArray.push(todaySeeLink);
+		rtn_seqArray.push(todaySeeSeq);
+		rtn_dateArray.push(todaySeeDate);
+		
+		setCookie('subject', JSON.stringify(rtn_subjectArray));
+		setCookie('link', JSON.stringify(rtn_linkArray));
+		setCookie('seq', JSON.stringify(rtn_seqArray));
+		setCookie('date', JSON.stringify(rtn_dateArray));
+	}
+
+	if(rtn_linkArray == undefined || rtn_linkArray == [] || rtn_linkArray == '') {
+		rtn_subjectArray.push(todaySeeSubject);
+		rtn_linkArray.push(todaySeeLink);
+		rtn_seqArray.push(todaySeeSeq);
+		rtn_dateArray.push(todaySeeDate);
+		
+		setCookie('subject', JSON.stringify(rtn_subjectArray));
+		setCookie('link', JSON.stringify(rtn_linkArray));
+		setCookie('seq', JSON.stringify(rtn_seqArray));
+		setCookie('date', JSON.stringify(rtn_dateArray));
+	}
+}
+
+function searchGo(searchNm){
+	document.location.href="/search.do?keyword="+ encodeURIComponent(searchNm);
+}
+
+function closeLayerPop(nm, val, day){
+	setCookie(nm, val, day);
+	lyPopupClose(event);
+}
+
+$(function() {
+	var re = /[<>'"]/gi;
+	$('[type=input],[type=text]').keyup(function(ev) {
+		if(ev.which == 188 || ev.which == 190) {
+			$(this).val($(this).val().replace(re, ''));
+		}
+	});
+});
+
+//쿠키 설정 검색
+function setCookieSearch(cTerm){
+	var cName = "tempCookie";
+	var cValue = cTerm;
+	var cDay = 1;
+
+	var start = document.cookie.indexOf(cName);
+	if (start != -1) {
+		var tempArray = getCookie(cName).split(",");
+		for(var i in tempArray){
+			if(i == 4)
+				break;
+			if(tempArray[i] == cTerm)
+				return;
+			if(tempArray[i] != "")
+				cValue = cValue + "," + tempArray[i];
+		}
+	}
+
+	var expire = new Date();
+	expire.setDate(expire.getDate() + cDay);
+	cookies = cName + '=' + escape(cValue) + '; path=/'; // 한글 깨짐을 막기위해 escape(cValue)를 합니다.
+	if (typeof cDay != 'undefined')
+		cookies += ';expires=' + expire.toGMTString() + ';';
+	document.cookie = cookies;
+}

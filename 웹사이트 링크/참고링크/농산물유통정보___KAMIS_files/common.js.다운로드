@@ -1,0 +1,703 @@
+// 달력
+$(function() {
+	GoogleAnalytics.init();
+	$(".datepicker").datepicker({
+
+		dateFormat: 'yy-mm-dd',
+		monthNamesShort: ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],
+		dayNamesMin: ['일','월','화','수','목','금','토'],
+		changeMonth: true, //월변경가능
+		changeYear: true, //년변경가능
+		showMonthAfterYear: true, //년 뒤에 월 표시
+	});
+
+	$(".datepicker1").datepicker({
+
+		showOn: "both",//151202 추가
+        buttonImage: "/images/customer/btn_calendar.png",//151202 추가
+        buttonImageOnly: true,//151202 추가
+		dateFormat: 'yy-mm-dd',
+		monthNamesShort: ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],
+		dayNamesMin: ['일','월','화','수','목','금','토'],
+		changeMonth: true, //월변경가능
+		changeYear: true, //년변경가능
+		maxDate: new Date(), //오늘날짜까지만 가능하도록
+		showMonthAfterYear: true //년 뒤에 월 표시
+	});
+
+	var enableDay = ['2018-07-20','2018-07-01','2018-06-12','2017-11-11'];
+	function selectableDays(date) {
+		/*dummy = date.getDate() + "-" + (date.getMonth() + 1) + "-" + date.getFullYear(); */
+		dummy = date.getFullYear() + "-" + (date.getMonth() +1 < 10? "0" +  (date.getMonth() +1): date.getMonth() +1 ) + "-" + (date.getDate() < 10? "0" +  date.getDate(): date.getDate());
+		if ($.inArray(dummy, enableDay) > -1) {
+			return [true, "Highlighted"];
+			}
+		return [false, ""]; }
+
+	$(".datepicker2").datepicker({
+		dateFormat: 'yy-mm-dd',
+		monthNamesShort: ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],
+		dayNamesMin: ['일','월','화','수','목','금','토'],
+		changeMonth: true, //월변경가능
+		changeYear: true, //년변경가능
+		showMonthAfterYear: true, //년 뒤에 월 표시
+		beforeShowDay: selectableDays
+	});
+
+	/*******  프린트 - 1023 김상훈 *******/
+	$.getScript('/js/jquery.printArea.js', function() {
+		$('#btn_print').click(function() {
+			$('.content').printArea(
+				{mode : 'popup', popWd : 900, popHt : 800}
+			);
+		});
+	});
+
+	/*******  스크랩 - 1023 김상훈 *******/
+	$('#btn_favorite').click(function(){
+		$('#favorite').show();
+		$('#favorite_url').val(document.location.href);
+	});
+
+	$('#favorite_close').click(function(){
+		$('#favorite').hide();
+	});
+
+	$('#favorite_save').click(function(){
+		var l_favorite_name			= $('#favorite_name').val();
+		var l_favorite_description	= $('#favorite_description').val();
+		var l_favorite_url			= $('#favorite_url').val();
+
+		var l_url = '/customer/mypage/favorite/favorite.do?action=saveByAjax';
+
+		$.ajax({
+			type : 'post'
+			, url : l_url
+			, dataType : 'text'
+			, data : {
+				 'subject'		: l_favorite_name
+				,'description'	: l_favorite_description
+				,'url'			: l_favorite_url
+			},
+			success : function(p_json) {
+				try {
+					var l_result = eval('(' + p_json + ')');
+					alert(l_result.resultmessage);
+
+					// 만약, 성공일	경우에는 목록의	첫 페이지를	보여줌
+					if(Number(l_result.resultcode) >= 0) {
+						$('#favorite').hide();
+					}
+				}catch(e) {
+					alert("[/js/customer/common.js ajax error] " + e.description);
+				}
+			},
+			error : function(xhr, errmsg, errobj) {
+				if(JsUtil.checkAdminSessionByAjax(xhr.status)) {
+					return false;
+				} else {
+					alert(errmsg);
+				}
+			}
+		});
+	});
+
+	/* 스마트 가격조회 기간검색 - S */
+	$('#regDatepickerComm').datepicker();
+	$('#regDatepickerComm').datepicker("option", "maxDate", new Date());
+	$('#regDatepickerComm').datepicker("option", "onSelect", function ( selectedDate ) {
+		$("#regdaycommon").val(selectedDate).trigger('change');
+	});
+
+	if($("#regdaycommon").val() == ''){
+		$("#regdaycommon").val($("#regDatepickerComm").datepicker({ dateFormat: 'yy-mm-dd' }).val());
+	}else{
+		$('#regDatepickerComm').datepicker("setDate", $("#regdaycommon").val());
+	}
+
+	$('#startDatepickerComm').datepicker();
+	$('#startDatepickerComm').datepicker("option", "maxDate", $("#enddaycommon").val());
+	$('#startDatepickerComm').datepicker("option", "onSelect", function ( selectedDate ) {
+		$("#endDatepickerComm").datepicker( "option", "minDate", selectedDate );
+		$("#startdaycommon").val(selectedDate).trigger('change');
+	});
+	if($("#startdaycommon").val() == ''){
+		$("#startdaycommon").val($("#startDatepickerComm").datepicker({ dateFormat: 'yy-mm-dd' }).val());
+	}else{
+		$('#startDatepickerComm').datepicker("setDate", $("#startdaycommon").val());
+	}
+
+	$('#endDatepickerComm').datepicker();
+	$('#endDatepickerComm').datepicker("option", "maxDate", new Date());
+	$('#endDatepickerComm').datepicker("option", "onSelect", function ( selectedDate ) {
+		$("#startDatepickerComm").datepicker( "option", "maxDate", selectedDate );
+		$("#enddaycommon").val(selectedDate).trigger('change');
+	});
+	if($("#enddaycommon").val() == ''){
+		$("#enddaycommon").val($("#endDatepickerComm").datepicker({ dateFormat: 'yy-mm-dd' }).val());
+	}else{
+		$('#endDatepickerComm').datepicker("setDate", $("#enddaycommon").val());
+	}
+	/* 스마트 가격조회 기간검색 - E */
+
+	/* 각 페이지 기간검색 - S */
+	$('#regDatepicker').datepicker();
+	$('#regDatepicker').datepicker("option", "maxDate", new Date());
+	$('#regDatepicker').datepicker("option", "onSelect", function ( selectedDate ) {
+		$("#regday").val(selectedDate).trigger('change');
+	});
+
+	if($("#regday").val() == ''){
+		$("#regday").val($("#regDatepicker").datepicker({ dateFormat: 'yy-mm-dd' }).val());
+	}else{
+		$('#regDatepicker').datepicker("setDate", $("#regday").val());
+	}
+
+	$('#regDatepicker1').datepicker();
+	$('#regDatepicker1').datepicker("option", "maxDate", new Date());
+	$('#regDatepicker1').datepicker("option", "onSelect", function ( selectedDate ) {
+		$("#regday").val(selectedDate).trigger('change');
+	});
+
+	if($("#regday").val() == ''){
+		$("#regday").val($("#regDatepicker1").datepicker({ dateFormat: 'yy-mm-dd' }).val());
+	}else{
+		$('#regDatepicker1').datepicker("setDate", $("#regday").val());
+	}
+
+	$('#startDatepicker').datepicker();
+	$('#startDatepicker').datepicker("option", "maxDate", $("#endday").val());
+	$('#startDatepicker').datepicker("option", "onSelect", function ( selectedDate ) {
+		$("#endDatepicker").datepicker( "option", "minDate", selectedDate );
+		$("#startday").val(selectedDate).trigger('change');
+	});
+	if($("#startday").val() == ''){
+		$("#startday").val($("#startDatepicker").datepicker({ dateFormat: 'yy-mm-dd' }).val());
+	}else{
+		$('#startDatepicker').datepicker("setDate", $("#startday").val());
+	}
+
+	$('#endDatepicker').datepicker();
+	$('#endDatepicker').datepicker("option", "maxDate", new Date());
+	$('#endDatepicker').datepicker("option", "onSelect", function ( selectedDate ) {
+		$("#startDatepicker").datepicker( "option", "maxDate", selectedDate );
+		$("#endday").val(selectedDate).trigger('change');
+	});
+	if($("#endday").val() == ''){
+		$("#endday").val($("#endDatepicker").datepicker({ dateFormat: 'yy-mm-dd' }).val());
+	}else{
+		$('#endDatepicker').datepicker("setDate", $("#endday").val());
+	}
+	/* 각 페이지 기간검색 - E */
+
+
+	//셀 병합
+	$.fn.rowspan = function(colIdx) {
+
+		return this.each(function() {
+
+			var that;
+			$('tr', this).each(function(row) {
+
+				$('td:eq(' + colIdx + ')', this).each(function(col) {
+
+
+					if($(this).prev().html() == $(that).prev().html()) {
+
+						if($(this).html() == $(that).html()) {
+
+							rowspan = $(that).attr("rowSpan");
+
+							if (rowspan == undefined) {
+								$(that).attr("rowSpan", 1);
+								rowspan = $(that).attr("rowSpan");
+							}
+
+							rowspan = Number(rowspan) + 1;
+							$(that).attr("rowSpan", rowspan); // do your action
+																// for the colspan
+																// cell here
+							$(this).remove(); // .remove(); // do your action for the
+											// old cell here
+						} else {
+							that = this;
+						}
+					} else {
+						that = this;
+					}
+
+					that = (that == null) ? this : that; // set the that if
+															// not already set
+				});
+			});
+		});
+	};		
+});
+
+$(document).ready(function(){
+
+// 스마트조회 on/off 151030 수정
+$('.smart_open').toggle(function() {
+	$(this).html('간편<br/>조회 닫기');
+	$('.smartWrap').slideDown('');
+}, function() {
+	$(this).html('간편<br/>조회');
+	$('.smartWrap').slideUp('');
+});
+
+$('.nav_table ul li').click(function(){
+	$('.nav_table ul li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+	$('.smart_search_nav > div').removeClass('on');
+	$(this).parents('div').addClass('on');
+});
+
+
+// 160113 ->
+$('.smart_search_nav div > header').click(function(){
+	$('.smart_search_nav div').not($(this)).removeClass('on');
+	$(this).parents('div').addClass('on');
+	$('.nav_table ul li').not($(this)).removeClass('on');
+});
+$('.smart_first_on1').click(function(){
+	$('.nav_table ul li').not($(this)).removeClass('on');
+	$('.smart_first1').addClass('on');
+});
+$('.smart_first_on2').click(function(){
+	$('.nav_table ul li').not($(this)).removeClass('on');
+	$('.smart_first2').addClass('on');
+});
+$('.smart_first_on3').click(function(){
+	$('.nav_table ul li').not($(this)).removeClass('on');
+	$('.smart_first3').addClass('on');
+});
+$('.smart_first_on4').click(function(){
+	$('.nav_table ul li').not($(this)).removeClass('on');
+	$('.smart_first4').addClass('on');
+});
+$('.smart_first_on5').click(function(){
+	$('.nav_table ul li').not($(this)).removeClass('on');
+	$('.smart_first5').addClass('on');
+});
+// 160113 <-
+
+
+$('.sc_ns').on("click", "li", function(){
+	$('.sc_ns li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+$('.ss1_ns').on("click", "li", function(){
+	$('.ss1_ns li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+$('.ss2_ns').on("click", "li", function(){
+	$('.ss2_ns li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+$('.ss3_ns').on("click", "li", function(){
+	$('.ss3_ns li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+$('.ss4_ns').on("click", "li", function(){
+	$('.ss4_ns li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+$('.ss5_ns').on("click", "li", function(){
+	$('.ss5_ns li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+$('.ss6_ns').on("click", "li", function(){
+	$('.ss6_ns li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+
+$('.sc_ns_sub').on("click", "li", function(){
+	$('.sc_ns_sub li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+$('.ss1_ns_sub').on("click", "li", function(){
+	$('.ss1_ns_sub li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+$('.ss1_ns_sub').on("click", "button", function(){
+	$('.ss1_ns_sub button').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+$('.ss2_ns_sub').on("click", "li", function(){
+	$('.ss2_ns_sub li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+$('.ss3_ns_sub').on("click", "li", function(){
+	$('.ss3_ns_sub li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+$('.ss4_ns_sub').on("click", "li", function(){
+	$('.ss4_ns_sub li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+$('.ss5_ns_sub').on("click", "li", function(){
+	$('.ss5_ns_sub li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+$('.ss6_ns_sub').on("click", "li", function(){
+	$('.ss6_ns_sub li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+$('.ss7_ns_sub').on("click", "li", function(){
+	$('.ss7_ns_sub li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+$('.ss8_ns_sub').on("click", "li", function(){
+	$('.ss8_ns_sub li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+
+$('.smart_list').on("click", ".btn_kg", function(){
+	if($(this).hasClass('on')){
+		$(this).removeClass('on');
+	}else{
+		$(this).addClass('on');
+	}
+});
+
+//gnb 151119
+$('.gnb ul li.m').hover(function() {//151119
+	$(this).find('.gnb_sub').stop(true,true).show();
+	$('.gnb_overlay').stop(true,true).show();
+}, function() {
+	$(this).find('.gnb_sub').stop(true,true).hide();
+	$('.gnb_overlay').stop(true,true).hide();
+});
+
+if($('.ss1_ns_sub').children(".on").length > 0){
+	$('.ss1_ns_sub').animate({
+        scrollTop: $('.ss1_ns_sub').scrollTop() + $('.ss1_ns_sub').children(".on").position().top - 35
+    }, 0);
+}
+if($('.ss2_ns_sub').children(".on").length > 0){
+	$('.ss2_ns_sub').animate({
+        scrollTop: $('.ss2_ns_sub').scrollTop() + $('.ss2_ns_sub').children(".on").position().top - 35
+    }, 0);
+}
+if($('.ss3_ns_sub').children(".on").length > 0){
+	$('.ss3_ns_sub').animate({
+        scrollTop: $('.ss3_ns_sub').scrollTop() + $('.ss3_ns_sub').children(".on").position().top - 35
+    }, 0);
+}
+if($('.ss4_ns_sub').children(".on").length > 0){
+	$('.ss4_ns_sub').animate({
+        scrollTop: $('.ss4_ns_sub').scrollTop() + $('.ss4_ns_sub').children(".on").position().top - 35
+    }, 0);
+}
+if($('.ss5_ns_sub').children(".on").length > 0){
+	$('.ss5_ns_sub').animate({
+        scrollTop: $('.ss5_ns_sub').scrollTop() + $('.ss5_ns_sub').children(".on").position().top - 35
+    }, 0);
+}
+if($('.ss6_ns_sub').children(".on").length > 0){
+	$('.ss6_ns_sub').animate({
+        scrollTop: $('.ss6_ns_sub').scrollTop() + $('.ss6_ns_sub').children(".on").position().top - 35
+    }, 0);
+}
+
+if($('.ss7_ns_sub').children(".on").length > 0){
+	$('.ss7_ns_sub').animate({
+        scrollTop: $('.ss7_ns_sub').scrollTop() + $('.ss7_ns_sub').children(".on").position().top - 35
+    }, 0);
+}
+
+if($('.ss8_ns_sub').children(".on").length > 0){
+	$('.ss8_ns_sub').animate({
+        scrollTop: $('.ss8_ns_sub').scrollTop() + $('.ss8_ns_sub').children(".on").position().top - 35
+    }, 0);
+}
+
+// snb
+$('.snb_menu > li').click(function(){
+	$('.snb_menu > li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+$('.snb_menu li ul li').click(function(){
+	$('.snb_menu li ul li').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+
+
+// faq on/off
+$('.faq_list dl').click(function(){
+	$('.faq_list dl').not($(this)).removeClass('on');
+	$(this).addClass('on');
+});
+
+
+// tab on/off
+$('.tab_common_ns li a').click(function(){
+	$('.common_tabview').not($('.cont_'+$(this).attr("id"))).hide();
+	$('.cont_'+$(this).attr("id")).show();
+
+	$('.tab_common_ns li a').not($(this)).removeClass('on');
+	$(this).addClass('on');
+
+	return false;
+});
+
+//tab on/off
+$('.item_common_ns li a').click(function(){
+	$('.common_tabview').not($('.cont_tab_07')).hide();
+	$('.cont_tab_07').show();
+	$('#tab_07').addClass('on');
+	$('.common_tabview_item').not($('.cont_'+$(this).attr("id"))).hide();
+	$('.cont_'+$(this).attr("id")).show();
+
+	$('.item_common_ns li a').not($(this)).removeClass('on');
+	$(this).addClass('on');
+
+	return false;
+});
+
+
+// 레이어
+$('.pop_open1_btn').click(function() {
+	$('.pop_open1, .pop_overlay',top.document).fadeIn('fast');
+});
+$('.pop_close1_btn').click(function(){
+	$('.pop_open1, .pop_overlay',top.document).fadeOut('fast');
+});
+
+$('.pop_open2_btn').click(function() {
+	$('.pop_open2, .pop_overlay',top.document).fadeIn('fast');
+});
+$('.pop_close2_btn').click(function(){
+	$('.pop_open2, .pop_overlay',top.document).fadeOut('fast');
+});
+
+$('.pop_open3_btn').click(function() {
+	$('.pop_open3, .pop_overlay',top.document).fadeIn('fast');
+});
+$('.pop_close3_btn').click(function(){
+	$('.pop_open3, .pop_overlay',top.document).fadeOut('fast');
+});
+
+$('.pop_open1_address').click(function() {
+	$('.pop_address, .pop_overlay',top.document).fadeIn('fast');
+});
+$('.pop_close1_address').click(function(){
+	$('.pop_address, .pop_overlay',top.document).fadeOut('fast');
+});
+
+$('.btn_scrap').click(function() {
+	$('.pop_scrap, .pop_overlay',top.document).fadeIn('fast');
+});
+$('.btn_scrap_close').click(function(){
+	$('.pop_scrap, .pop_overlay',top.document).fadeOut('fast');
+});
+
+// 151030 추가 ->
+/*$('.pop_graph_open').click(function(){
+	$('.pop_main_graph',top.document).fadeIn('fast');
+});*/
+$('.pop_graph_close').click(function(){
+	$('.pop_main_graph',top.document).fadeOut('fast');
+})
+/*$('.pop_graph_open2').click(function(){
+	$('.pop_main_graph2',top.document).fadeIn('fast');
+});*/
+$('.pop_graph_close2').click(function(){
+	$('.pop_main_graph2',top.document).fadeOut('fast');
+})
+
+// 차트 탭넘길때 기능
+$('.tab_common_ns2 li a').click(function(){
+	$('.common_tabview2').not($('.cont_'+$(this).attr("id"))).hide();
+	$('.cont_'+$(this).attr("id")).show();
+
+	$('.tab_common_ns2 li a').not($(this)).removeClass('on');
+	$(this).addClass('on');
+
+	return false;
+});
+
+$('.tab_common_ns3 li span').click(function(){
+	$('.common_tabview3').not($('.cont_'+$(this).attr("id"))).hide();
+	$('.cont_'+$(this).attr("id")).show();
+
+	$('.tab_common_ns3 li span').not($(this)).removeClass('on');
+	$(this).addClass('on');
+	$('.tab_common_ns3 li').not($(this)).removeClass('on');
+	$(this).parents('.tab_common_ns3 li').addClass('on');
+
+	return false;
+});
+// <- 151030 추가
+
+// totop 151104 추가
+$(".totop").hide(); // 탑 버튼 숨김
+$(function () {
+
+	$(window).scroll(function () {
+		if ($(this).scrollTop() > 100) { // 스크롤 내릴 표시
+			$('.totop').fadeIn();
+		} else {
+			$('.totop').fadeOut();
+		}
+	});
+
+	$('.totop').click(function () {
+		$('body,html').animate({
+			scrollTop: 0
+		}, 500);  // 탑 이동 스크롤 속도
+		return false;
+	});
+});
+
+Nethru.init();
+
+
+});
+
+/*******  화면 확대 축소 - 1023 김상훈 *******/
+var curSize = 1.0;	//현재비율
+var maxSize = 5.0;	//최대비율(5배)
+var minSize = 0.8;	//최소비율
+var Zoom = {
+	In : function() {
+		if (curSize < maxSize) {
+			curSize += 0.1;
+		} else {
+			return;
+		}
+		Zoom.op();
+	},
+
+	Out : function() {
+		if (curSize > minSize) {
+			curSize -= 0.1;
+		} else {
+			return;
+		}
+		Zoom.op();
+	},
+
+	Default : function() {
+		curSize = 1.0;
+		Zoom.op();
+	},
+
+	op : function() {
+		var _body = document.body;
+		if (jQuery.browser.msie) {
+			_body.style.zoom = curSize;
+		} else {
+			$('body').css('zoom', curSize);
+			$('body').css('-webkit-transform', 'scale(' + (curSize) + ')');
+			$('body').css('-webkit-transform-origin', '0 0');
+			$('body').css('-moz-transform', 'scale(' + (curSize) + ')');
+			$('body').css('-moz-transform-origin', '0 0');
+			$('body').css('-o-transform', 'scale(' + (curSize) + ')');
+			$('body').css('-o-transform-origin', '0 0');
+		}
+	}
+}
+
+
+
+/**
+ * 로그분석관련 함수
+ */
+var Nethru = {
+	/**
+	 * Default function
+	 */
+	init : function() {
+		var domain = Nethru.getDomain();
+		Nethru.makePersistentCookie("PCID", 10, "/", domain);
+	},
+
+	getCookieVal : function(offset) {
+		var endStr = document.cookie.indexOf(";", offset);
+		if (endStr == -1)
+			endStr = document.cookie.length;
+		return unescape(document.cookie.substring(offset, endStr));
+	},
+
+	setCookie : function(name, value) {
+		var argv = Nethru.setCookie.arguments;
+		var argc = Nethru.setCookie.arguments.length;
+		var expires = (2 < argc) ? argv[2] : null;
+		var path = (3 < argc) ? argv[3] : null;
+		var domain = (4 < argc) ? argv[4] : null;
+		var secure = (5 < argc) ? argv[5] : false;
+
+//		alert("DOMAIN = " + domain);
+		document.cookie = name  + "=" + escape (value) +
+			((expires == null) ? "" : ("; expires=" + expires.toGMTString())) +
+			((path == null) ? "" : ("; path=" + path)) +
+			((domain == null) ? "" : ("; domain=" + domain)) +
+			((secure == true) ? "; secure" : "");
+
+//		alert(document.cookie);
+	},
+
+	getCookie : function(name) {
+		var arg = name + "=";
+		var alen = arg.length;
+		var clen = document.cookie.length;
+		var i = 0;
+		while (i < clen) {
+			var j = i + alen;
+			if (document.cookie.substring(i,j) == arg)
+				return Nethru.getCookieVal(j);
+			i = document.cookie.indexOf(" ", i) + 1;
+			if (i == 0)
+				break;
+		}
+		return null;
+	},
+
+	makePersistentCookie : function(name, length, path, domain) {
+		var today = new Date();
+		var expiredDate = new Date(2111,1,1);
+		var cookie;
+		var value;
+
+		cookie = Nethru.getCookie(name);
+		if (cookie) {
+//			alert(cookie);
+			return 1;
+		}
+
+		var values = new Array();
+		for (i=0; i<length; i++) {
+			values[i] = "" + Math.random();
+		}
+
+		value = today.getTime();
+
+		//use first decimal
+		for (i=0; i<length; i++) {
+			value += values[i].charAt(2);
+		}
+
+		Nethru.setCookie(name, value, expiredDate, path, domain);
+	},
+
+	getDomain : function() {
+		var _host = document.domain;
+		var so = _host.split('.');
+		var dm = so[so.length-2] + "." + so[so.length-1];
+		return (so[so.length-1].length == 2) ? so[so.length-3] + "." + dm : dm;
+	}
+}
+
+var GoogleAnalytics = {
+	init : function() {
+		// 2021.10.28 웹로그 분석 고도화에 따른 내용 추가
+		// GA3
+		//$('head').prepend('<script async src="https://www.googletagmanager.com/gtag/js?id=UA-123172219-27"></script><script>window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag(\'js\', new Date());gtag(\'config\', \'UA-123172219-27\');</script>');
+		// GA2
+		//$('head').append('<script type="text/javascript">var _gaq = _gaq || [];_gaq.push(["_setAccount", "UA-22191612-3"]);_gaq.push(["_setDomainName", "kamis.co.kr"]);_gaq.push(["_trackPageview"]);(function() {var ga = document.createElement("script"); ga.type = "text/javascript"; ga.async = true;ga.src = ("https:" == document.location.protocol ? "https://ssl" : "http://www") + ".google-analytics.com/ga.js";var s = document.getElementsByTagName("script")[0]; s.parentNode.insertBefore(ga, s);})();</script>');
+		
+		// 2023.01.18 웹사이트 분석 고도화에 따른 내용 변경 (GA3 -> GA4로 업그레이드)
+		$('head').prepend('<script async src="https://www.googletagmanager.com/gtag/js?id=G-8CD1P6L7J7"></script><script>window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag(\'js\', new Date());gtag(\'config\', \'G-8CD1P6L7J7\', {\'content_group\':\'KAMIS\'});gtag(\'config\', \'G-1C6GSRP5Z8\', {\'content_group\':\'KAMIS\'});</script>');
+	}
+}

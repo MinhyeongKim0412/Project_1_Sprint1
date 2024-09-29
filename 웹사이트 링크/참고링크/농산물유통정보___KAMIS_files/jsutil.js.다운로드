@@ -1,0 +1,1160 @@
+var   JsUtil = {
+   /**
+    * select box가   여러개 있고, 1단계,   2단계, ... 종속적인   구조인 경우   동적으로 상위 select box에 따라   하위 select   box의 데이터를 구성한다.
+    * @param param.url                : 결과   데이터를 제공하는 서버쪽 url (ex> donation_cts_gibupgmcts.do?action=gibupgmclscode2List)
+    * @param param.chaininfo          : 체인에 대한 정보를 가지고 있는 collection
+    * @param param.chaininfo.actionname : change 이벤트가 발생했을   때 요청에 대한 응답을 처리할 actionname
+    * @param param.chaininfo.selector    : 체인을 형성하고 있는   select box를 가리키는 css selector
+    * @param param.param_key_names       : 체인을 형성할 때, key에 해당하는 이름. optional. Action에서 getInput().getString("XXX") 시 XXX에 해당하는 이름임
+    * @param param.param_custom       : 사용자 정의 매개변수 정의(optional)
+    * ex>
+         JsUtil.initSelectBoxChain({
+             url : 'donation_cts_gibupgmcts.do'    //   요청을 처리할 서버 url 정보
+            ,chaininfo : [
+               { selector : '#area_list select[name="gibupgmclscode1"]', actionname : 'gibupgmclscode2List' }   // chain의 첫번째 select box css selector 지정 및 change 이벤트   발생 시   요청을 처리할 서버의 actionname
+               ,{ selector   : '#area_list select[name="gibupgmclscode2"]' }    //   chain의   두번째 select box css selector.   마지막 element는 change   이벤트가 필요 없으므로 actionname 지정 필요   없음
+            ]
+            ,param_key_names : ['postaddr1']  // Action   java에서 getInput().getString("postaddr1") 이라고 받을 때 사용하는 문자열. 반드시 배열 notation을 사용해야한다.   왜냐하면 select   box   chain이   N단계인   경우 각각의   parameter key name을 지정하기 위해서다.   만약 param_key_names 을   지정하지 않으면   본 유틸리티가 자동으로 code1, code2, ... codeN 형식으로   parameter key name을 생성한다.
+            ,param_custom : { pepper_all_yn : 'Y' }  // 사용자 정의 매개변수 정의. select box의 value에 해당하는 값 이외의 값을 전달할 때 사용하며 optional 성격이다.
+         });
+    */
+   initSelectBoxChain : function(param) {
+      try   {
+         // select box chain   전체 개수 설정
+         var   l_total_size = (param.chaininfo).length;
+
+         // chain의 갯수가 1인 경우는 아무런   처리를 하지   않는다.
+         if(l_total_size   == 1) {
+            return;
+         }
+
+         // 매개변수에 해당하는 select box를   포함하여 상위에   있는 select   box들의   선택된 값을   활용하여 서버에   질의할 querystring 문자열을   반환하는 함수 선언
+         // @param p_base_index : select   box   chain 중, change event가 발생한   select box의 index 값
+         var   l_get_querystring =   function(p_base_index) {
+            var   l_returnvalue =   '';
+            if(param.param_key_names ==   undefined) {
+               for(var   i=0; i<=p_base_index; i++) {
+                  l_returnvalue += '&code' + (i+1) + '=' + encodeURIComponent(jQuery(param.chaininfo[i].selector).val());
+               }
+            } else {
+               for(var   i=0; i<=p_base_index; i++) {
+                  l_returnvalue += '&' + param.param_key_names[i] + '=' + encodeURIComponent(jQuery(param.chaininfo[i].selector).val());
+               }
+            }
+            if(param.param_custom != undefined) {
+               for(var item in param.param_custom) {
+                  l_returnvalue += '&' + item + '=' + encodeURIComponent(param.param_custom[item])
+               }
+            }
+            return l_returnvalue;
+         }
+         
+         // 마지막 select box를 제외하고   각 select box에   change 이벤트가   발생할 경우   호출될 서버   주소 정보를   설정, change 이벤트를 등록
+         for(var   i=0; i<l_total_size-1; i++)   {
+            var   l_current_obj =   jQuery(param.chaininfo[i].selector);
+
+            l_current_obj.data('index',   i);
+            l_current_obj.change(function()   {
+               // chain에서 현재 change 이벤트가 일어난 곳의 index   번호를 구한다.
+               var   l_index   = jQuery(this).data('index');
+
+               // change 이벤트가 일어났을   때 대상이 되는 객체(select box)를 캐싱한다.
+               var   l_target_index = l_index + 1;
+               var   l_target_obj = jQuery(param.chaininfo[l_target_index].selector);
+
+               // 구조적으로 대상 객체의 하위에 있는 객체(select box)의 데이터를 모두 초기화 한다.
+               for(var   l_clear_index =   l_target_index;   l_clear_index <   l_total_size; l_clear_index++) {
+                  var   l_clear_obj   = jQuery(param.chaininfo[l_clear_index].selector);
+                  jQuery(l_clear_obj)[0].length =   1;
+               }
+               
+               // 대상   객체의 데이터를   구성한다. 
+               l_target_obj.configOptionBox({
+                   url       : param.url + '?action=' +   param.chaininfo[l_index].actionname
+                  ,querystring : l_get_querystring(l_index)
+                  ,delete_all_force_yn : param.delete_all_force_yn
+               });
+            });
+         }
+      } catch(e) {
+         alert("[jsutil.js's   initSelectBoxChain]   " +   e.description);
+      }
+   },
+   /**
+    * json   형태의 데이터를   UI에 바인딩   처리
+    *    주의! 반드시 json key와 form ui의 name   속성이 일치해야한다.
+    * @param p_html_form_element   : binding 될 html form element 객체
+    * @param p_json_data         : bind data
+    */
+   bindUiFormByJson : function(p_html_form_element, p_json_data) {
+      try   {
+         var   l_jquery_form =   jQuery(p_html_form_element);
+         if(l_jquery_form.length   == 0) {
+            alert('jsutil.js bindUiFormByJson -   존재하지 않는 form element입니다.');
+            return;
+         }
+
+         var   l_json = null;
+         if(p_json_data[0] != undefined)   {
+            l_json = p_json_data[0];
+         } else {
+            l_json = p_json_data;
+         }
+         jQuery.each(l_jquery_form[0].elements, function(p_index, p_item) {
+            var l_value = l_json[jQuery(p_item).attr('name')];
+            if(l_value) {
+               jQuery(p_item).setValue(l_value);
+            }
+         });
+      } catch(e) {
+         alert("[jsutil.js's   bindUiFormByJson] "   + e.description);
+      }
+   },
+   /**
+    * 탭메뉴 처리
+    * @param $tabmenu : 예제에서 jQuery('ul.tabmenu') 값. 반드시 jquery 객체로   전달되어야 함
+    * @param active_tab_classname : tab이 활성화 되었을 때   classname
+    * ex>
+            <ul   class="tabmenu">
+               <li   class="on"><a href="#frm_jumin"   title="주민등록번호   인증 계정"><span>주민등록번호 인증 계정</span></a></li>
+               <li><a href="#area_ipin" title="아이핀(i-Pin) 인증 계정"><span>아이핀(i-Pin) 인증 계정</span></a></li>
+            </ul>
+
+            1) class="on" :   common.css ul.tabmenu 부분에 정의함. 선택된   탭 효과
+            2) href="#frm_jumin", href="#area_ipin"   : 탭에 해당하는   컨텐츠 영역의 id 값을 왼쪽과 같이 지정함.
+    */
+   initTabMenu   : function($tabmenu, active_tab_classname) {
+      try   {
+         if(active_tab_classname   == undefined) {
+            active_tab_classname = 'on';
+         }
+         var   jQuerylast_visible_tab_item   = null;
+         var   jQuerylast_visible_tab_contents   = null;
+         jQuery.each($tabmenu.children('li').children('a'), function(p_index, p_item) {
+            // 현재   class="on" 여부에 따른 기본   처리
+            var   jQuerycurrent_tab =   jQuery(p_item);
+            var   jQuerytab_contents = jQuery(jQuerycurrent_tab.attr('href').substr(jQuerycurrent_tab.attr('href').indexOf('#'), jQuerycurrent_tab.attr('href').length));
+            if(jQuerycurrent_tab.parent().hasClass(active_tab_classname)) {
+               jQuerytab_contents.show();
+               jQuerylast_visible_tab_item   = jQuerycurrent_tab;
+               jQuerylast_visible_tab_contents   = jQuerytab_contents;
+            } else {
+               jQuerytab_contents.hide();
+            }
+
+            // 이벤트 바인딩
+            jQuerycurrent_tab.click(function() {
+               // 기존   보여지고 있는 컨텐츠 안보이게 처리
+               jQuerylast_visible_tab_contents.hide();
+
+               // 기존   보여지고 있는 탭메뉴 안보이게 처리
+               jQuerylast_visible_tab_item.parent().removeClass(active_tab_classname);
+
+               // 새로운 컨텐츠 보이게   처리
+               jQuerytab_contents.show();
+
+               // 해당   탭메뉴 보이게 처리
+               if(jQuerycurrent_tab.parent().hasClass(active_tab_classname) ==   false) {
+                  jQuerycurrent_tab.parent().addClass(active_tab_classname);
+                  jQuerylast_visible_tab_item   = jQuerycurrent_tab;
+               }
+
+               // 현재   보여지고 있는 컨텐츠 정보 캐싱
+               jQuerylast_visible_tab_contents   = jQuerytab_contents;
+
+               jQuery('body').focus();
+
+               return false; // prevent click event bubling
+            });
+         });
+      } catch(e) {
+         alert("[jsutil.js's   initTabMenu] " + e.description);
+      }
+   },
+   /**
+    * 글자수 계산
+    * @param p_msg   : 글자수 계산할   문자열
+    */
+   countByteOfStr : function(p_msg) {
+      var   l_returnvalue =   0;
+      try   {
+         for(var   i=0; i<p_msg.length; i++){
+            var   ch = p_msg.charAt(i);
+            if(escape(ch).length > 4) {
+               l_returnvalue += 2;
+            } else {
+               l_returnvalue++;
+            }
+         }
+      } catch(e) {
+         alert("[jsutil.js's   countByteOfStr]   " +   e.description);
+      }
+      return l_returnvalue;
+   },
+   /**
+    * querystring 문자열을   map   객체로 변환하는   함수
+    * @param p_querystring   : 변환할 querystring 문자열
+    */
+   convertQuerystringToMap   : function(p_querystring) {
+      var   l_map =   {};
+      try   {
+         // '?' 필터링
+         var   l_question_position   = -1;
+         var   l_querystring =   p_querystring;
+         if((l_question_position   = l_querystring.indexOf('?')) >   -1)   {
+            l_querystring =   l_querystring.substring(l_question_position   + 1, l_querystring.length);
+         }
+
+         // &amp; 존재 시 &로 변환
+         if(l_querystring.indexOf('&amp;') >   -1)   {
+            l_querystring =   l_querystring.replace(/&amp;/g,   '&');
+         }
+
+         // parse
+         var   l_arr_items   = l_querystring.split('&');
+         for(var   i in l_arr_items) {
+            var   l_arr_key_values = l_arr_items[i].split('=');
+            if(l_arr_key_values.length == 2) {
+               l_map[l_arr_key_values[0]] = l_arr_key_values[1];
+            }
+         }
+      } catch(e) {
+         alert('[jsutil.js JsUtil.convertQuerystringToJson] ' + e.description);
+      }
+      return l_map;
+   },
+   /**
+    * @param p_statuscode : http response statuscode (서버에서   설정한 값 :   getResponse().setStatus(AdminSessionItem.SESSION_OUT_STATUSCODE);)
+    * @return {true : 세션유지되고   있음 | false : 세션종료되었음}
+    */
+   checkAdminSessionByAjax   : function(p_statuscode) {
+      try   {
+         // 관리자 세션 존재여부   확인
+         if(JsUtil.isAliveAdminSessionByAjax(p_statuscode) == false)   {
+            return false;
+         }
+
+         // 관리자 권한여부 확인
+         switch(p_statuscode) {
+            case 602 :   // 읽기권한
+               alert("읽기권한이 없습니다.");
+               window.history.back(-1);
+               return false;
+            case 603 :   // 저장권한
+               alert("저장권한이 없습니다.");
+               return false;
+            case 604 :   // 다운로드권한
+               alert("다운로드권한이 없습니다.");
+               return false;
+            case 605 :   // 접속 불가 IP
+               alert("해당 IP는 접속이 불가능합니다.");
+               return false;
+         }
+
+         // 관리자 세션이 존재하며 권한도 존재하는 경우
+         return true;
+      } catch(e) {
+         alert('[jsutil.js JsUtil.checkAdminSessionByAjax] '   + e.description);
+         return false;
+      }
+   },
+   /**
+    * @param p_statuscode : http response statuscode (서버에서   설정한 값 :   getResponse().setStatus(AdminSessionItem.SESSION_OUT_STATUSCODE);)
+    * @return {true : 세션유지되고   있음 | false : 세션종료되었음}
+    */
+   isAliveAdminSessionByAjax :   function(p_statuscode) {
+      try   {
+         if(p_statuscode   == '601')   {
+            alert('세션이 종료되었습니다. 로그인 후   이용해주세요.');
+            window.location.href="/monitor/main/login.do";
+            return false;
+         }
+         return true;
+      } catch(e) {
+         alert('[jsutil.js JsUtil.isAliveAdminSessionByAjax]   ' +   e.description);
+         return false;
+      }
+   },
+   /**
+    * @param p_statuscode : http response statuscode (서버에서   설정한 값 :   getResponse().setStatus(MemberSessionItem.SESSION_OUT_STATUSCODE);)
+    * @return {true : 세션유지되고   있음 | false : 세션종료되었음}
+    */
+   isAliveMemberSessionByAjax : function(p_statuscode)   {
+      try   {
+         if(p_statuscode   == '601')   {
+            alert('세션이 종료되었습니다. 로그인 후   이용해주세요.');
+            window.location.href="/user/main/login.do";
+            return false;
+         }
+         return true;
+      } catch(e) {
+         alert('[jsutil.js JsUtil.isAliveMemberSessionByAjax] ' + e.description);
+         return false;
+      }
+   }
+}
+
+function setSearchBox(flag, id) {
+   if(flag == 'kg'){
+      if($("#"+id).val() == 'Y'){
+         $("#"+id).val("N").trigger('change');
+      }else{
+         $("#"+id).val("Y").trigger('change');
+      }
+   }else{
+      $("#"+id).val(flag).trigger('change');
+      /*alert("$$$$$ ===" + $("#"+id).val(flag).trigger('change'));*/
+   }
+	$(".selectbox").each(function () {
+		var $this = $(this);
+		
+		$this.find(".selected").click(function () {
+	        $(".selectoptions").hide();
+	        if (!$this.find(".selectoptions").is(":visible")) {
+	            $this.find(".selectoptions").slideDown(100);
+	            $this.addClass("on")
+	        } else {
+	            $this.find(".selectoptions").slideUp(100);
+	            $this.removeClass("on")
+	        }
+	        return false;
+	    })
+		$this.find(".option").click(function () {
+            val = $(this).text();
+            $this.find(".selected").text(val);
+            $this.find(".selectoptions").slideUp(100);
+            $this.find(".selected").removeClass("on")
+            $this.find(".option").removeClass("on")
+            $(this).addClass("on")
+            $this.removeClass("on")
+            return false;
+        })
+	})
+}
+
+jQuery.fn.extend({
+   /**
+    * ajax를 이용해서 select box의   데이터를 구성하는 함수
+    *    대상이   되는 select   box의 첫번째 option   value =   '' 이면   제거를 안하고 그렇지 않으면   제거하고 새로운   데이터로 구성합니다.
+    * @param param                  : json format
+    * @param param.url               : 결과 데이터를 제공하는 서버쪽 url (ex> donation_cts_gibupgmcts.do?action=gibupgmclscode2List)
+    * @param param.querystring         : 서버에 전달할 질의 문장(ex>   code1=12&code2=32&code3=23)
+    * @param param.selectedvalue      : 동적으로 option   list가 구성된 후 기본적으로   선택된 값을   설정할 값
+    * @param param.callback         : 데이터 구성이 끝난 후 호출할 callback 함수
+
+    예시>
+         selectGibupgmclscode2List :   function(p_gibupgmclscode1)   {
+            try   {
+               jQuery('#area_list select[name="gibupgmclscode2"]').configSelectBox({
+                   url        :   'donation_cts_gibupgmcts.do?action=gibupgmclscode2List'
+                  ,querystring  :   'code1=12&code2=32&code3=23'
+               });
+            } catch(e) {
+               alert("[donation_cts_gibupgmcts_list.js's selectGibupgmclscode2List] " + e.description);
+            }
+         }
+    */
+   configSelectBox   : function(param) {
+      return this.each(function(p_index, p_item) {
+         try   {
+            var   jQuerythis = jQuery(this);
+
+            // ul box만   처리 가능하도록   제한
+//            if(jQuerythis[0].tagName.toUpperCase() != 'UL')   {
+//               alert("[customer/jsutil.js's configSelectBox   - ul box 요소만   configSelectBox   메소드를 사용할   수 있습니다.] "   + e.description);
+//               return;
+//            }
+            
+            // 데이터 구성
+            jQuery.ajax({
+               type : 'GET'
+               ,url : param.url
+               ,dataType :   'text'
+               ,data :   param.querystring
+               ,async : false
+               ,success : function(p_json)   {
+                  try   {
+					// 스크롤 바 생성 및 삭제
+//					if(JSON.parse(p_json).length > 10){
+//						jQuerythis.parents(".selectoptions").addClass("mCustomScrollbar");
+//						jQuerythis.parents(".selectoptions").mCustomScrollbar();
+//					}
+//					 else 
+//						jQuerythis.parents(".selectoptions").removeClass("mCustomScrollbar");
+						
+                     jQuerythis.children().remove();
+
+                     var selectedCode = "";
+
+					 // 부류별 전체 추가
+					 if(jQuery(location).attr('pathname') == '/customer/price/agricultureRetail/catalogue.do' || jQuery(location).attr('pathname') == '/customer/price/wholesale/catalogue.do'){
+						if(JSON.parse(p_json).length === 0){
+							jQuerythis.append('<li class="option default on" id="' + param.id + '_0"><a href="javascript:void(0);" onclick="setSearchBox(\'\',\'' + param.id + '\')">전체</a></li>');
+						}
+						selectedCode = ''; 
+					 }
+
+                     // 데이터 동적 구성
+                     /*alert(jQuery(location).attr('href').substr(0, 72));*/
+                     jQuery.each(eval('('+p_json+')'), function(p_index,   p_item)   {
+						/* 등급 */
+						if(param.productclscode != '03' && (jQuery(location).attr('pathname') != '/customer/price/nature/market.do' || $('#actionUrl') != '/customer/price/nature/market.do') && param.id == 'productrankcode') {
+                           if(p_index == 0){
+                              jQuerythis.append('<li class="option default on" id="' + param.id + '_0"><a href="javascript:void(0);" onclick="setSearchBox(\'\',\'' + param.id + '\')">전체</a></li>');
+                              $('<li class="option" id="' + param.id + '_' + p_item.rank + '"><a href="javascript:void(0);" onclick="setSearchBox(\'' + p_item.rank + '\',\'' + param.id + '\')">' + p_item.name + '</a></li>').appendTo(jQuerythis);
+                              selectedCode = '';
+                           }else{
+                              $('<li class="option" id="' + param.id + '_' + p_item.rank + '"><a href="javascript:void(0);" onclick="setSearchBox(\'' + p_item.rank + '\',\'' + param.id + '\')">' + p_item.name + '</a></li>').appendTo(jQuerythis);
+                           } 
+                        /* 지역 */
+                        }else if(param.productclscode != '03' && (jQuery(location).attr('pathname') != '/customer/price/nature/market.do' || $('#actionUrl') != '/customer/price/nature/market.do') && (param.id == 'countycodecommon' || param.id == 'countycode')){
+                           if(p_index == 0){
+                              jQuerythis.append('<li class="option default on" id="' + param.id + '_' + p_item.code + '"><a href="javascript:void(0);" onclick="setSearchBox(\'\',\'' + param.id + '\')">전체</a></li>');
+                              $('<li class="option" id="' + param.id + '_' + p_item.code + '"><a href="javascript:void(0);" onclick="setSearchBox(\'' + p_item.code + '\',\'' + param.id + '\')">' + p_item.name + '</a></li>').appendTo(jQuerythis);
+                              selectedCode = '';
+                           }else{
+                              $('<li class="option" id="' + param.id + '_' + p_item.code + '"><a href="javascript:void(0);" onclick="(\'' + p_item.code + '\',\'' + param.id + '\')">' + p_item.name + '</a></li>').appendTo(jQuerythis);
+                           }
+                        }else{
+                           if(p_index == 0){
+							  if((jQuery(location).attr('pathname') == '/customer/price/agricultureRetail/catalogue.do' || jQuery(location).attr('pathname') == '/customer/price/wholesale/catalogue.do' || jQuery(location).attr('pathname') == '/customer/trend/trade/daily.do' || jQuery(location).attr('pathname') == '/customer/archive/archive.do') && param.id != 'kindcode'){
+							  	jQuerythis.append('<li class="option default on" id="' + param.id + '_0"><a href="javascript:void(0);" onclick="setSearchBox(\'\',\'' + param.id + '\')">전체</a></li>');
+                              	$('<li class="option" id="' + param.id + '_' + p_item.code + '"><a href="javascript:void(0);" onclick="setSearchBox(\'' + p_item.code + '\',\'' + param.id + '\')">' + p_item.name + '</a></li>').appendTo(jQuerythis);
+							  	selectedCode = '';                              
+							  }else	if(param.id === 'search_yyyy'){
+							  	$('<li class="option " id="' + param.id + '_' + p_item.code + '"><a href="javascript:void(0);" onclick="setSearchBox(\'' + p_item.code + '\',\'' + param.id + '\')">' + p_item.name + '</a></li>').appendTo(jQuerythis);
+								selectedCode = '';
+							  }else{
+							  	$('<li class="option default on" id="' + param.id + '_' + p_item.code + '"><a href="javascript:void(0);" onclick="setSearchBox(\'' + p_item.code + '\',\'' + param.id + '\')">' + p_item.name + '</a></li>').appendTo(jQuerythis);
+							  	selectedCode = p_item.code;
+							  }
+                           }else{
+                              $('<li class="option" id="' + param.id + '_' + p_item.code + '"><a href="javascript:void(0);" onclick="setSearchBox(\'' + p_item.code + '\',\'' + param.id + '\')">' + p_item.name + '</a></li>').appendTo(jQuerythis);
+                           }
+                        }
+                     });
+
+				     // 축산물인 경우
+                     if(param.id == 'itemcategorycode' && jQuery(location).attr('pathname').indexOf('livestockRetail') > 0){
+						$("#ulitemcategorycode > li").removeClass('on');
+						$("#itemcategorycode_500").addClass('on');
+						selectedCode = '500';
+					 }
+				
+					 // li 태그 전체 값 setting
+                     if(param.id != 'itemcategorycode' && (jQuery(location).attr('pathname') == '/customer/price/agricultureRetail/catalogue.do' || jQuery(location).attr('pathname') == '/customer/price/wholesale/catalogue.do') && param.id != 'itemcode' && param.id != 'kindcode'  && param.id != 'productrankcode'){
+					   	$('<li class="option" id="' + param.id + '_0"><a href="javascript:void(0);" onclick="setSearchBox(\'\',\'' + param.id + '\')">전체</a></li>').appendTo(jQuerythis);
+					 }else if(jQuery(location).attr('pathname') == '/customer/trend/trade/daily.do' && (param.id == 'itemcode' || param.id == 'kindcode')){
+						if(JSON.parse(p_json).length === 0)
+							jQuerythis.append('<li class="option default on" id="' + param.id + '_0"><a href="javascript:void(0);" onclick="setSearchBox(\'\',\'' + param.id + '\')">전체</a></li>');
+					 }
+                     
+					 if(param.id != 'itemcategorycode' || param.id != 'search_categorycode'){
+						 // selected 값 세팅
+						 jQuerythis.parents('.selectoptions').prev().text(jQuerythis.children("li.on").text());
+					 }
+				
+                     // callback 호출
+                     if(typeof(param.callback) == 'function') {
+                        param.callback(selectedCode);
+                     }
+                  } catch(e) {
+                     alert("[customer/jsutil.js's configSelectBox ajax] "   + e.description);
+                  }
+               }
+            });
+         } catch(e) {
+            alert("[customer/jsutil.js's configSelectBox] " + e.description);
+         }
+      });
+   },
+   configOptionBox   : function(param) {
+      return this.each(function(p_index, p_item) {
+         try   {
+            var   jQuerythis = jQuery(this);
+            // select box만   처리 가능하도록   제한
+            if(jQuerythis[0].tagName.toUpperCase() != 'SELECT')   {
+               alert("[jsutil.js's configSelectBox   - select box 요소만   configSelectBox   메소드를 사용할   수 있습니다.] "   + e.description);
+               return;
+            }
+            
+            // 존재하는   element에 대한 것인지 확인
+            if(jQuerythis.length ==   0) {
+               alert("[jsutil.js's configSelectBox   - 존재하지 않는   selector로 configSelectBox 메소드를   사용하였습니다.] " + e.description);
+               return;
+            }
+            
+            // 데이터 구성
+            jQuery.ajax({
+               type : 'GET'
+               ,url : param.url
+               ,dataType :   'text'
+               ,data :   param.querystring
+               ,async : false
+               ,success : function(p_json)   {
+                  try   {
+                     // 대상   selectbox 초기화 - 기 구성된 option   element   제거
+                     if(jQuerythis.children().length > 0) {
+                        if(jQuerythis.children().get(0).value == '') {
+                           jQuerythis[0].length = 1;
+                        } else {
+                           jQuerythis[0].length = 0;
+                        }
+                        if(param.delete_all_force_yn != undefined) {
+                           if(param.delete_all_force_yn == 'Y') {
+                              jQuerythis[0].length = 0;
+                           }
+                        }
+                     }
+                     
+                     // 데이터 동적 구성
+                     jQuery.each(eval('('+p_json+')'), function(p_index,   p_item)   {
+                        if(p_item.yyyy == undefined){
+                           jQuerythis.append('<option value="'+p_item.code+'">'+p_item.name+'</option>');
+                        }else{
+                           jQuerythis.append('<option value="'+p_item.yyyy+'">'+p_item.yyyy+'년</option>');
+                        }
+                     });
+
+                     // 현재   선택된 값 설정
+                     if(param.selectedvalue != undefined   && param.selectedvalue != '') {
+                        jQuerythis.setValue(param.selectedvalue);
+                     }
+                  } catch(e) {
+                     alert("[jsutil33.js's configOptionBox ajax] "   + e.description);
+                  }
+               }
+            });
+         } catch(e) {
+            alert("[jsutil.js's configOptionBox] " + e.description);
+         }
+      });
+   },
+   
+   /**
+    * 값 설정 함수
+    * @param p_value :   설정할 값
+    */
+   setValue : function(p_value) {
+      return this.each(function()   {
+         try   {
+            var   jQuerythis = jQuery(this);
+            if(jQuerythis.length ==   0) {
+               return this;
+            }
+            switch(jQuerythis[0].tagName.toUpperCase())   {
+            case 'INPUT' :
+               switch(jQuerythis.attr('type').toUpperCase()) {
+               case 'TEXT'   :
+               case 'HIDDEN' :
+               case 'PASSWORD'   :
+                  jQuerythis.val(p_value);
+                  break;
+               case 'CHECKBOX'   :
+               case 'RADIO' :
+                  if(jQuerythis.val()   == p_value)   {
+                     jQuerythis[0].checked = true;
+                  } else {
+                     jQuerythis[0].checked = false;
+                  }
+                  break;
+               }
+               break;
+            case 'TEXTAREA'   :
+               jQuerythis.val(p_value);
+               break;
+            case 'SELECT' :
+               /*
+               var   l_selected_index = 0;
+               jQuery.each(jQuerythis.children('option'), function(p_index, p_item) {
+                  if(jQuery(p_item).val()   == p_value)   {
+                     l_selected_index = p_index;
+                     return false; // break
+                  }
+               });
+               jQuerythis.children('option:eq('+l_selected_index+')').attr('selected',   true);
+               */
+               jQuerythis.val(p_value);
+               break;
+            }
+         } catch(e) {
+            alert("[jsutil.js's   setValue] "   + e.description);
+         }
+      });
+   },
+   /**
+    * 숫자만 입력 가능하도록 처리
+    */
+   numberOnly : function()   {
+      return this.each(function()   {
+         try   {
+            var   jQuerythis = $(this);
+
+            // FF patch   : 한글입력 상태에서   keydown   입력 제한이   안걸리는 문제가   있어 한글 입력 불가능하도록   설정
+            jQuerythis.css('ime-mode', 'disabled');
+
+            // 숫자,콤마,backspace,enter key만 입력   가능하도록 제한
+            jQuerythis.keydown(function(p_event) {
+               var   l_before_length   = jQuerythis.val().length;
+               var   l_keycode =   p_event.keyCode;
+               var   l_str     =   l_keycode >   57 ? String.fromCharCode(l_keycode-48) : String.fromCharCode(l_keycode);
+               var   l_pattern =   /^[0-9]$/;
+               // back-space, tab-key enter-key, delete-key, ←, ↑,   →, ↓는 입력   가능하도록 함
+               if(l_keycode ==   8 || l_keycode == 9   || l_keycode ==   13 || l_keycode   == 46 || l_keycode == 37 ||   l_keycode == 38   || l_keycode ==   39 || l_keycode   == 40) {
+                  return true;
+               }
+
+               // 숫자만 입력 가능하도록 함
+               var   l_after_length = jQuerythis.val().length;
+               if(!l_pattern.test(l_str)) {
+                  if(l_before_length != l_after_length) {
+                     jQuerythis.val(jQuerythis.val().substring(0, l_after_length   - 1));
+                  }
+                  return false;
+               } else {
+                  return true;
+               }
+            });
+
+            // 포커스를   얻어을 때 처리 - number   format을 위한 콤마를 모두 제거한다.
+            jQuerythis.focus(function()   {
+               jQuerythis.val(jQuerythis.val().replace(/,/g, ''));
+            });
+         } catch(e) {
+            alert("[jsutil.js's   numberOnly] "   + e.description);
+         }
+      });
+   },
+   /**
+    * 숫자(소수점)만 입력 가능하도록 처리
+    */
+   numberPointOnly : function()   {
+      return this.each(function()   {
+         try   {
+            var   jQuerythis = $(this);
+
+            // FF patch   : 한글입력 상태에서   keydown   입력 제한이   안걸리는 문제가   있어 한글 입력 불가능하도록   설정
+            jQuerythis.css('ime-mode', 'disabled');
+
+            // 숫자,콤마,backspace,enter key만 입력   가능하도록 제한
+            jQuerythis.keydown(function(p_event) {
+               var   l_before_length   = jQuerythis.val().length;
+               var   l_keycode =   p_event.keyCode;
+               var   l_str     =   l_keycode >   57 ? String.fromCharCode(l_keycode-48) : String.fromCharCode(l_keycode);
+               var   l_pattern =   /^[0-9]$/;
+               // back-space, tab-key enter-key, delete-key, ←, ↑,   →, ↓는 입력   가능하도록 함
+               if(l_keycode ==   8 || l_keycode == 9   || l_keycode ==   13 || l_keycode   == 46 || l_keycode == 37 ||   l_keycode == 38   || l_keycode ==   39 || l_keycode   == 40 || l_keycode == 110 || l_keycode == 190) {
+                  return true;
+               }
+
+               // 숫자만 입력 가능하도록 함
+               var   l_after_length = jQuerythis.val().length;
+               if(!l_pattern.test(l_str)) {
+                  if(l_before_length != l_after_length) {
+                     jQuerythis.val(jQuerythis.val().substring(0, l_after_length   - 1));
+                  }
+                  return false;
+               } else {
+                  return true;
+               }
+            });
+
+            // 포커스를   얻어을 때 처리 - number   format을 위한 콤마를 모두 제거한다.
+            jQuerythis.focus(function()   {
+               jQuerythis.val(jQuerythis.val().replace(/,/g, ''));
+            });
+         } catch(e) {
+            alert("[jsutil.js's   numberOnly] "   + e.description);
+         }
+      });
+   },
+   /**
+    * 입력   엘리먼트에 대한   숫자 형식 처리
+    */
+   numberFormat : function() {
+      return this.each(function()   {
+         try {
+                var jQuerythis = $(this);
+
+                // 숫자,콤마,backspace,enter key만 입력 가능하도록 제한
+                jQuerythis.keydown(function(p_event) {
+                    var l_keycode = p_event.keyCode;
+                    var l_str     = l_keycode > 57 ? String.fromCharCode(l_keycode-48) : String.fromCharCode(l_keycode);
+                    var l_pattern = /^[0-9]+$/;
+                    // back-space, tab-key enter-key, delete-key, ←, ↑, →, ↓는 입력 가능하도록 함
+                    if(l_keycode == 8 || l_keycode == 9 || l_keycode == 13 || l_keycode == 46 || l_keycode == 37 || l_keycode == 38 || l_keycode == 39 || l_keycode == 40) {
+                        return true;
+                    }
+
+                    // 숫자만 입력 가능하도록 함
+                    if(!l_pattern.test(l_str)) {
+                        return false;
+                    } else {
+                        return true;
+                    }
+                });
+
+            // 포커스를 잃었을 때 처리 - 999,999,999 format으로 변환 처리
+            jQuerythis.blur(function() {
+               var l_str = $(this).val();
+               var l_arr_newstr = new Array();
+               var l_counter = 0;
+               if(l_str.indexOf(',') != -1) {
+                  return true;
+               }
+               for(var i=l_str.length-1; i>=0; i--) {
+                  if((l_counter >= 3) && (l_counter % 3 == 0)) {
+                     l_arr_newstr.push(',');
+                  }
+                  l_arr_newstr.push(l_str.charAt(i));
+                  l_counter++;
+               }
+               jQuerythis.val(l_arr_newstr.reverse().join(''));
+            });
+            } catch(e) {
+                alert("[jsutil.js's numberFormat] " + e.description);
+            }
+      });
+   },
+   /**
+    * textbox에 숫자만   입력 가능하며, 포커스를   잃었을 때 XXX-XXXX-XXX형식으로 변환해주고, 포커스를   얻었을 때 숫자만 표시되도록   변환 처리
+    */
+   telFormat :   function() {
+      return this.each(function()   {
+         try   {
+            var   jQuerythis = $(this);
+
+            // FF patch   : 한글입력 상태에서   keydown   입력 제한이   안걸리는 문제가   있어 한글 입력 불가능하도록   설정
+            jQuerythis.css('ime-mode', 'disabled');
+
+            // back-space, tab-key enter-key, delete-key, ←, ↑,   →, ↓는 입력   가능하도록 제한
+            jQuerythis.keydown(function(p_event) {
+               var   l_keycode =   p_event.keyCode;
+               var   l_str     =   l_keycode >   57 ? String.fromCharCode(l_keycode-48) : String.fromCharCode(l_keycode);
+               var   l_pattern =   /^[0-9]$/;
+               // back-space(8), tab-key(9), enter-key(13), delete-key(46), ←(37),   ↑(38), →(39), ↓(40)는 입력 가능하도록 함
+               if(l_keycode ==   8 || l_keycode == 9   || l_keycode ==   13 || l_keycode   == 46 || l_keycode == 37 ||   l_keycode == 38   || l_keycode ==   39 || l_keycode   == 40) {
+                  return true;
+               }
+
+               // 숫자만 입력 가능하도록 함
+               if(!l_pattern.test(l_str)) {
+                  return false;
+               } else {
+                  return true;
+               }
+            });
+
+            // 포커스를   잃었을 때 처리 - 999-9999-9999 format으로 변환 처리
+            var   fn_change_to_telformat = function(p_str) {
+               return p_str.replace(/(0(?:2|[0-9]{2}))([0-9]+)([0-9]{4}$)/,"$1-$2-$3");
+            }
+            jQuerythis.blur(function() {
+               jQuerythis.val(fn_change_to_telformat(jQuerythis.val()));
+            });
+
+            // 포커스를   얻었을 때 처리 - 숫자만   존재하도록 변환   처리
+            var   fn_change_to_onlynumber   = function(p_str) {
+               return p_str.replace(/[^0-9]/g,   '');
+            }
+            jQuerythis.focus(function()   {
+               jQuerythis.val(fn_change_to_onlynumber(jQuerythis.val()));
+            });
+         } catch(e) {
+            alert("[jsutil.js's   telFormat] " + e.description);
+         }
+      });
+   },
+   /**
+    * 날짜   형식으로 변환
+    */
+   dateFormat : function()   {
+      return this.each(function()   {
+         try   {
+            var   jQuerythis = jQuery(this);
+
+            // FF patch   : 한글입력 상태에서   keydown   입력 제한이   안걸리는 문제가   있어 한글 입력 불가능하도록   설정
+            jQuerythis.css('ime-mode', 'disabled');
+
+            // 숫자,콤마,backspace,enter key만 입력   가능하도록 제한
+            jQuerythis.keydown(function(p_event) {
+               var   l_keycode =   p_event.keyCode;
+               var   l_str     =   l_keycode >   57 ? String.fromCharCode(l_keycode-48) : String.fromCharCode(l_keycode);
+               var   l_pattern =   /^[0-9]+jQuery/;
+               var   l_value     =   jQuerythis.val();
+
+               // back-space, enter-key, delete-key는 입력   가능하도록 함
+               if(l_keycode ==   8 || l_keycode == 13 ||   l_keycode == 46) {
+                  if(l_keycode ==   8) {
+                     switch(l_value.length) {
+                     case 6 :
+                     case 9 :
+                        jQuerythis.val(l_value.substring(0,   l_value.length - 1));
+                        break;
+                     }
+                  }
+                  return true;
+               }
+
+               // 입력   문자열 길이가 10자리(- 포함)넘을 경우 더이상 입력 못하도록 막음   && 입력   문자열 길이에 따른 '-' 기호   삽입 처리
+               switch(l_value.length) {
+               case 4 :
+                  jQuerythis.val(l_value + '-');
+                  break;
+               case 7 :
+                  jQuerythis.val(l_value + '-');
+                  break;
+               case 10   :
+                  return false;
+               }
+
+               // 숫자만 입력 가능하도록 함
+               if(!l_pattern.test(l_str)) {
+                  return false;
+               } else {
+                  return true;
+               }
+            });
+         } catch(e) {
+            alert("[jsutil.js's   dateFormat]   " +   e.description);
+         }
+      });
+   },
+   /**
+    * date   picker costomizing
+    */
+   datepickerCustom : function() {
+      return this.each(function()   {         
+         try   {
+            
+            jQuery(this).datepicker({ showMonthAfterYear :true,   monthNamesShort:['1월',   '2월', '3월', '4월', '5월',   '6월', '7월', '8월', '9월',   '10월',   '11월',   '12월'], changeMonth:true, changeYear:true, dateFormat : 'yy-mm-dd', buttonImage :'http://static.naver.net/www/u/2010/0611/nmms_215646753.gif' }).attr('readonly',   true);
+         } catch(e) {
+            alert("[jsutil.js's   datepickerCustom] "   + e.description);
+         }
+      });
+   },
+   /**
+    * select box에   년도를 동적으로   구성
+    * @param p_year_range : 표시할   년도의 범위   (ex> +-   5(년))
+    */
+   makeYearList : function(p_year_range) {
+      return this.each(function(p_index, p_item) {
+         try   {
+            var jQuerythis = jQuery(this);
+
+            // check validation
+            if(jQuerythis.length ==   0) {
+               alert('[jsutil.js JsUtil.makeYearList] select box 객체가 잘못 지정되었습니다.');
+               return;
+            }
+            if(p_year_range   == undefined ||   Number(p_year_range) ==   NaN) {
+               alert('[jsutil.js JsUtil.makeYearList] p_year_range을 바르게 지정하세요.');
+               return;
+            }
+
+            // 년도   데이터 구성
+            var   fn_reload_select_box = function(jQuerytarget, p_selected_year) {
+               var   l_selected_year   = Number(p_selected_year);
+               var   l_start_year = l_selected_year - p_year_range;
+               var   l_finish_year =   l_selected_year   + p_year_range;
+
+               // 기존에 구성된 데이터   모두 제거
+               jQuerytarget.children('option').remove();
+
+               // 신규로 데이터 구성
+               for(var   l_year = l_start_year; l_year<=   l_finish_year; l_year++) {
+                  if(l_year == p_selected_year) {
+                     jQuerytarget.append('<option value="'+l_year+'"   selected="selected">'+l_year+'년</option>');
+                  } else {
+                     jQuerytarget.append('<option value="'+l_year+'">'+l_year+'년</option>');
+                  }
+               }
+
+               return false;
+            }
+
+            // 년도   변경 이벤트   바인딩
+            jQuerythis.change(function(e) {
+               return fn_reload_select_box(jQuery(e.target), jQuery(this).children('option:selected').val());
+            });
+
+            fn_reload_select_box(jQuerythis, jQuerythis.children('option:eq(0)').val());
+         } catch(e) {
+            alert("[jsutil.js JsUtil.makeYearList] " + e.description);
+         }
+      });
+   },
+   /**
+    * ifarme 레이어 생성
+    * @param.url         : 레이어에 표시될 URL(string. 필수)
+    * @param.width         : 레이어 넓이(integer. 필수)
+    * @param.height      : 레이어 높이(integer. 필수)
+    * @param.size_unit      : 레이어 크기의 단위(string. 옵션. px, %. default px)
+    * @param.position_x   : 레이어 x좌표(integer. 옵션)
+    * @param.position_y   : 레이어 y좌표(integer. 옵션)
+    * @param.position_unit   : 레이어 좌표의 단위(string. 옵션)
+    *
+    * ex> $('body').openIframeLayer({
+    *          'url' : '/member/check_memberid.do'
+    *         ,'width' : 400
+    *         ,'height' : 300
+    *     });
+    *
+    * ex> $('#robertj_area').openIframeLayer({
+    *          'url' : '/member/check_memberid.do'
+    *         ,'width' : 400
+    *         ,'height' : 300
+    *     });
+    */
+   openIframeLayer : function(param) {
+      return this.each(function(p_index, p_item) {
+         try {
+            // check parameter validation
+            if(!param.url) {
+               alert("[jsutil.js JsUtil.openIframeLayer] Iframe의 URL을 확인하세요.");
+               return;
+            }
+            if(!parseInt(param.width)) {
+               alert("[jsutil.js JsUtil.openIframeLayer] Iframe의 넓이를 확인하세요.");
+               return;
+            }
+            if(!parseInt(param.height)) {
+               alert("[jsutil.js JsUtil.openIframeLayer] Iframe의 높이를 확인하세요.");
+               return;
+            }
+
+            var $place_holder = jQuery(this);
+
+            // 생성된 iframe이 없는 경우 생성. 있으면 기존 것 활용
+            var $iframe_layer = $place_holder.children('#iframe_layer');
+            if($iframe_layer.length == 0) {
+               $place_holder.append('<div id="iframe_wrapper"></div>')
+                         .append('<iframe id="iframe_layer" frameborder="0" width="0" height="0" marginwidth="0" marginheight="0" style="display:none; background-color:#fff;"></iframe>');
+               $iframe_layer = $place_holder.children('#iframe_layer');
+            }
+
+            // iframe url 지정
+            $iframe_layer.attr('src', param.url);
+
+            // iframe 크기 설정
+            var s_size_unit = 'px';
+            if(param.size_unit) {
+               s_size_unit = param.size_unit;
+            }
+            var s_width = param.width + s_size_unit;
+            var s_height = param.height + s_size_unit;
+
+            // iframe 위치 설정
+            var s_position_unit = 'px';
+            if(param.position_unit) {
+               s_position_unit = param.position_unit;
+            }
+            var i_position_x = param.position_x;
+            var i_position_y = param.position_y;
+            if(!i_position_x) {
+               i_position_x = $(window).scrollLeft() + parseInt(($(window).width() - param.width) / 2);
+            }
+            if(!i_position_y) {
+               i_position_y = $(window).scrollTop() + parseInt(($(window).height() - param.height) / 2);
+            }
+            var s_position_x = i_position_x + s_position_unit;
+            var s_position_y = i_position_y + s_position_unit;
+
+            // iframe Wrapper 디자인 지정
+            var $iframe_wrapper = $('#iframe_wrapper');
+            $iframe_wrapper.css({
+                'position' : 'absolute'
+               ,'top' : 0
+               ,'left' : 0
+               ,'opacity' : 0.4
+               ,'width' : '100%'
+               ,'height' : $(document).height()
+               ,'background-color' : '#000'
+            });
+
+            // iframe 디자인 지정
+            $iframe_layer.css({
+                'position' : 'absolute'
+               ,'top' : s_position_y
+               ,'left' : s_position_x
+               ,'width' : s_width
+               ,'height' : s_height
+            }).show();
+
+            // 브라우저 창 사이즈 변경이나 스크롤 변경시 레이어 위치 변경 (단, 모바일 기기에서는 제외)
+            var l_user_agent = navigator.userAgent;
+            if(l_user_agent.match(/iPhone|iPod|Android|Windows CE|BlackBerry|Symbian|Windows Phone|webOS|Opera Mini|Opera Mobi|POLARIS|IEMobile|lgtelecom|nokia|SonyEricsson/i) == null && l_user_agent.match(/LG|SAMSUNG|Samsung/) == null) {
+               $(window).bind('resize scroll', function() {
+                  // iframe 위치 설정
+                  i_position_x = param.position_x;
+                  i_position_y = param.position_y;
+                  if(!i_position_x) {
+                     i_position_x = $(window).scrollLeft() + parseInt(($(window).width() - param.width) / 2);
+                  }
+                  if(!i_position_y) {
+                     i_position_y = $(window).scrollTop() + parseInt(($(window).height() - param.height) / 2);
+                  }
+                  s_position_x = i_position_x + s_position_unit;
+                  s_position_y = i_position_y + s_position_unit;
+
+                  $iframe_layer.css({
+                      'position' : 'absolute'
+                     ,'top' : s_position_y
+                     ,'left' : s_position_x
+                     ,'width' : s_width
+                     ,'height' : s_height
+                  }).show();
+               });
+            }
+         } catch(e) {
+            alert("[jsutil.js JsUtil.openIframeLayer] " + e.description);
+         }
+      });
+   },
+   /**
+    * ifarme 레이어 닫기
+    *
+    * ex> $('body').ope
+    */
+   closeIframeLayer : function() {
+      return this.each(function(p_index, p_item) {
+         try {
+            // 생성된 iframe이 존재하는지 확인
+            var $place_holder = jQuery(this);
+            var $iframe_wrapper = $('#iframe_wrapper', $place_holder);
+            var $iframe_layer = $('#iframe_layer', $place_holder);
+
+            // 레이어 wrapper 삭제
+            $iframe_wrapper.remove();
+
+            // 레이어 삭제
+            $iframe_layer.fadeOut(400, function() {
+               $(this).remove();
+            });
+         } catch(e) {
+            alert("[jsutil.js JsUtil.openIframeLayer] " + e.description);
+         }
+      });
+   }
+});
+
+jQuery.fn.extend({
+    /**
+     *  이미지 롤링. jCarouselLite 1.2 확장팩 사용.(1.2에서 이벤트 추가됨) http://www.gmarwaha.com/jquery/jcarousellite/?#doc 참조
+     *
+     *  btnPrev      : null     // 네비게이션에서 사용할 [이전] 버튼을 위한 셀렉터. ex> '.btn_prev'
+     *  ,btnNext     : null     // 네비게이션에서 사용할 [다음] 버튼을 위한 셀렉터. ex> '.btn_next'
+     *  ,auto        : null     // 이미지 '자동' 슬라이드 시간. 기본 값은 null.(자동 슬라이드 되지 않음)
+     *  ,speed       : 0        // 이미지 슬라이딩 속도. ex> 800, 1500...
+     *  ,easing      : null,    // jquery easing effect plugin 셋팅
+     *  ,vertical    : false    // 가로-세로 롤링 여부. 기본 false.
+     *  ,circular    : false    // 선형 데이터여부. true일 경우, 데이터가 순차적으로 순환됨
+     *  ,visible     : 3        // 화면에 몇 개의 이미지 아이템이 보이는지 숫자. 기본 3.
+     *  ,start       : 0        // 몇 번째 이미지 아이템부터 보여줄 지에 대한 값. 기본 0.
+     *  ,beforeStart : null     // 이미지 아이템이 슬라이드 이펙트가 이루어지기 전에 실행할 콜백 함수 지정. function(p_item) { ... }
+     *  ,afterEnd    : null     // 이미지 아이템이 슬라이드 이펙트가 끝난 직후에 실행할 콜백 함수 지정. function(p_item) { ... }
+     *  ,onClickItem : null     // 이미지 아이템을 클릭했을 경우 실행할 함수 지정. function(p_event, p_item) { ... }
+     *  ,scroll: 1
+     *  ,pauseOnHover: false
+     **/
+    rollingImage : function(config) {
+        var config = $.extend({
+                                        btnPrev      : null
+                                        ,btnNext     : null
+                                        ,auto        : null
+                                        ,speed       : 0
+                                        ,easing      : null
+                                        ,vertical    : false
+                                        ,circular    : false
+                                        ,visible     : 3
+                                        ,start       : 0
+                                        ,beforeStart : null
+                                        ,afterEnd    : null
+                                        ,onClickItem : null
+                                        ,scroll: 1
+                                        ,pauseOnHover: false
+                                    }, config);
+
+        var $this = $(this);        // 컨테이너
+
+        if($this == undefined || $this.length == 0) {
+            alert('Rolling image Element Obj가 존재하지 않습니다.');
+            return false;
+        }
+
+        var $imageList = $this.children('ul:first-child');    // 리스트
+        if($imageList == undefined || $imageList.length == 0) {
+            alert('Rolling image Element Obj 내에 ul 요소가 존재하지 않습니다.');
+            return false;
+        }
+
+        var $imageItems = $imageList.children('li');        // 리스트 아이템
+
+        // 컨텐츠 섬네일 이미지 롤러 사용 여부 결정
+        if($imageItems.length > config.visible) {
+            $this.jCarouselLite(config);
+         $this.css('left', '63px');
+         $this.css('width', '781px');
+        } else {
+            $(config.btnPrev    ).css('display', 'none');
+            $(config.btnNext    ).css('display', 'none');
+        }
+        if($.isFunction(config.onClickItem)) {
+            $imageItems.click(function(p_event) { config.onClickItem(p_event, $(this)); });
+        }
+
+    },
+
+    rollingItem : function(config) {
+        var config = $.extend({
+                                        btnPrev      : null
+                                        ,btnNext     : null
+                                        ,auto        : null
+                                        ,speed       : 0
+                                        ,easing      : null
+                                        ,vertical    : false
+                                        ,circular    : false
+                                        ,visible     : 3
+                                        ,start       : 0
+                                        ,beforeStart : null
+                                        ,afterEnd    : null
+                                        ,onClickItem : null
+                                        ,scroll: 1
+                                        ,pauseOnHover: false
+                                    }, config);
+
+        var $this = $(this);        // 컨테이너
+        if($this == undefined || $this.length == 0) {
+            alert('Rolling image Element Obj가 존재하지 않습니다.');
+            return false;
+        }
+
+        var $imageList = $this.children('ul:first-child');    // 리스트
+
+        if($imageList == undefined || $imageList.length == 0) {
+            alert('Rolling image Element Obj 내에 ul 요소가 존재하지 않습니다.');
+            return false;
+        }
+
+        var $imageItems = $imageList.children('li');        // 리스트 아이템
+
+        // 컨텐츠 섬네일 이미지 롤러 사용 여부 결정
+        if($imageItems.length > config.visible) {
+            $this.jCarouselLite(config);
+         $this.css('width', '455px');
+         $this.css('height', '121px');
+         $imageItems.css({
+               'width' : '455px',
+               'height' : '24px',
+               'float' : 'left'
+         });
+        } else {
+            $(config.btnPrev    ).css('display', 'none');
+            $(config.btnNext    ).css('display', 'none');
+        }
+        if($.isFunction(config.onClickItem)) {
+            $imageItems.click(function(p_event) { config.onClickItem(p_event, $(this)); });
+        }
+
+    }
+});
